@@ -11,7 +11,8 @@ import {
   Clock, 
   CreditCard,
   LogOut,
-  Home
+  Home,
+  Activity
 } from 'lucide-react'
 import Link from 'next/link'
 import Button from '@/components/Button'
@@ -55,6 +56,13 @@ export default function AdminDashboard({ session }: AdminDashboardProps) {
       description: 'عرض المبيعات والإحصائيات',
       href: '/admin/reports',
       color: 'bg-purple-500'
+    },
+    {
+      icon: Activity,
+      title: 'حالة النظام',
+      description: 'مراقبة حالة التطبيق وقاعدة البيانات',
+      href: '/dash/status',
+      color: 'bg-red-500'
     }
   ]
 
@@ -63,7 +71,7 @@ export default function AdminDashboard({ session }: AdminDashboardProps) {
       {/* Header */}
       <motion.div 
         {...animations.slideIn}
-        className="bg-white rounded-3xl shadow-lg p-6 mb-8"
+        className="bg-white dark:bg-gray-800 rounded-3xl shadow-lg p-6 mb-8"
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4 rtl:space-x-reverse">
@@ -77,15 +85,15 @@ export default function AdminDashboard({ session }: AdminDashboardProps) {
             )}
             <div>
               <h1 className={cn(
-                'text-2xl font-bold',
+                'text-2xl font-bold text-gray-900 dark:text-white',
                 theme.text.primary
               )}>
                 لوحة تحكم الإدارة
               </h1>
-              <p className={cn('text-sm', theme.text.secondary)}>
+              <p className={cn('text-sm text-gray-600 dark:text-gray-300', theme.text.secondary)}>
                 مرحباً {session.user?.name || 'مدير'} ({session.user?.email})
               </p>
-              <div className="flex items-center mt-2 text-xs text-red-600">
+              <div className="flex items-center mt-2 text-xs text-red-600 dark:text-red-400">
                 <div className="w-2 h-2 bg-red-500 rounded-full mr-2 rtl:ml-2"></div>
                 وضع الإدارة
               </div>
@@ -124,12 +132,12 @@ export default function AdminDashboard({ session }: AdminDashboardProps) {
             key={stat.title}
             {...animations.scaleIn}
             transition={{ delay: index * 0.1 }}
-            className="bg-white rounded-2xl p-4 shadow-lg"
+            className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-lg"
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className={cn('text-xs', theme.text.secondary)}>{stat.title}</p>
-                <p className={cn('text-xl font-bold', theme.text.primary)}>{stat.value}</p>
+                <p className={cn('text-xs text-gray-600 dark:text-gray-400', theme.text.secondary)}>{stat.title}</p>
+                <p className={cn('text-xl font-bold text-gray-900 dark:text-white', theme.text.primary)}>{stat.value}</p>
               </div>
               <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center', stat.color)}>
                 <stat.icon className="w-5 h-5 text-white" />
@@ -140,7 +148,7 @@ export default function AdminDashboard({ session }: AdminDashboardProps) {
       </div>
 
       {/* Menu Grid */}
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {menuItems.map((item, index) => (
           <motion.div
             key={item.title}
@@ -151,7 +159,7 @@ export default function AdminDashboard({ session }: AdminDashboardProps) {
               <motion.div
                 whileHover={{ scale: 1.02, y: -4 }}
                 whileTap={{ scale: 0.98 }}
-                className="bg-white rounded-3xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-100"
+                className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-100 dark:border-gray-700"
               >
                 <div className="flex items-center space-x-4 rtl:space-x-reverse">
                   <div className={cn(
@@ -162,24 +170,24 @@ export default function AdminDashboard({ session }: AdminDashboardProps) {
                   </div>
                   <div className="flex-1">
                     <h3 className={cn(
-                      'text-lg font-bold mb-1',
+                      'text-lg font-bold mb-1 text-gray-900 dark:text-white',
                       theme.text.primary
                     )}>
                       {item.title}
                     </h3>
                     <p className={cn(
-                      'text-sm',
+                      'text-sm text-gray-600 dark:text-gray-300',
                       theme.text.secondary
                     )}>
                       {item.description}
                     </p>
                   </div>
                   <motion.div
-                    className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center"
+                    className="w-6 h-6 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center"
                     whileHover={{ backgroundColor: '#f97316' }}
                   >
                     <svg
-                      className="w-3 h-3 text-gray-600"
+                      className="w-3 h-3 text-gray-600 dark:text-gray-300"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -204,10 +212,10 @@ export default function AdminDashboard({ session }: AdminDashboardProps) {
       <motion.div
         {...animations.slideIn}
         transition={{ delay: 0.5 }}
-        className="bg-white rounded-3xl shadow-lg p-6 mt-8"
+        className="bg-white dark:bg-gray-800 rounded-3xl shadow-lg p-6 mt-8"
       >
         <h2 className={cn(
-          'text-xl font-bold mb-6',
+          'text-xl font-bold mb-6 text-gray-900 dark:text-white',
           theme.text.primary
         )}>
           النشاط الأخير للنظام
@@ -233,24 +241,24 @@ export default function AdminDashboard({ session }: AdminDashboardProps) {
               price: '89 ر.س'
             }
           ].map((activity, index) => (
-            <div key={index} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
+            <div key={index} className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
               <div>
-                <p className={cn('font-medium', theme.text.primary)}>
+                <p className={cn('font-medium text-gray-900 dark:text-white', theme.text.primary)}>
                   {activity.title}
                 </p>
-                <p className={cn('text-sm', theme.text.secondary)}>
+                <p className={cn('text-sm text-gray-600 dark:text-gray-300', theme.text.secondary)}>
                   {activity.time}
                 </p>
               </div>
               <div className="text-left">
                 <p className={cn(
                   'text-sm font-medium',
-                  activity.status === 'معلق' ? 'text-yellow-600' : 'text-green-600'
+                  activity.status === 'معلق' ? 'text-yellow-600 dark:text-yellow-400' : 'text-green-600 dark:text-green-400'
                 )}>
                   {activity.status}
                 </p>
                 {activity.price && (
-                  <p className={cn('text-sm font-bold', theme.text.primary)}>
+                  <p className={cn('text-sm font-bold text-gray-900 dark:text-white', theme.text.primary)}>
                     {activity.price}
                   </p>
                 )}
