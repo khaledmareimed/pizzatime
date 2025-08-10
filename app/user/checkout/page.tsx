@@ -1,66 +1,43 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '../../../funcs/utils';
 import { theme, responsive, animations } from '../../../funcs/responsive';
+import { useCartContext } from '../../../funcs/contexts/CartContext';
 import OrderDetails, { OrderItem } from '../../../components/OrderDetails';
 import CheckoutForm from '../../../components/CheckoutForm';
 import PaymentInfo from '../../../components/PaymentInfo';
 import DeliveryInfo from '../../../components/DeliveryInfo';
 
-// Sample order data
-const sampleOrderItems: OrderItem[] = [
-  {
-    id: '1',
-    name: 'Gourmet Burger',
-    price: 14.99,
-    quantity: 2,
-    image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=400&fit=crop',
-    addons: [
-      { id: 'addon1', name: 'Extra Cheese', price: 2.00 },
-      { id: 'addon2', name: 'Bacon', price: 3.50 }
-    ],
-    comments: 'Medium rare, no pickles please'
-  },
-  {
-    id: '2',
-    name: 'Truffle Fries',
-    price: 8.99,
-    quantity: 1,
-    image: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=400&h=400&fit=crop',
-    addons: [
-      { id: 'addon3', name: 'Extra Truffle Oil', price: 1.50 }
-    ]
-  },
-  {
-    id: '3',
-    name: 'Chocolate Milkshake',
-    price: 6.50,
-    quantity: 1,
-    image: 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=400&h=400&fit=crop',
-    comments: 'Extra whipped cream and cherry on top'
-  }
-];
-
 export default function CheckoutPage() {
-  const [orderItems, setOrderItems] = useState<OrderItem[]>(sampleOrderItems);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { items: cartItems, updateQuantity, removeItem, clearCart } = useCartContext();
 
-  const updateQuantity = (itemId: string, newQuantity: number) => {
+  // Convert CartItems to OrderItems for the OrderDetails component
+  const orderItems: OrderItem[] = useMemo(() => {
+    return cartItems.map(cartItem => ({
+      id: cartItem.id,
+      name: cartItem.name,
+      price: cartItem.price,
+      quantity: cartItem.quantity,
+      image: cartItem.image,
+      addons: cartItem.addons.map(addon => ({
+        id: addon.id,
+        name: addon.name,
+        price: addon.price
+      })),
+      comments: cartItem.comments
+    }));
+  }, [cartItems]);
+
+  const handleUpdateQuantity = (itemId: string, newQuantity: number) => {
     if (newQuantity < 1) return;
-    
-    setOrderItems(prev => 
-      prev.map(item => 
-        item.id === itemId 
-          ? { ...item, quantity: newQuantity }
-          : item
-      )
-    );
+    updateQuantity(itemId, newQuantity);
   };
 
-  const removeItem = (itemId: string) => {
-    setOrderItems(prev => prev.filter(item => item.id !== itemId));
+  const handleRemoveItem = (itemId: string) => {
+    removeItem(itemId);
   };
 
   const handleFormSubmit = async (formData: any) => {
@@ -74,11 +51,14 @@ export default function CheckoutPage() {
       console.log('Order submitted:', { formData, orderItems });
       
       // Show success message or redirect
-      alert('Order submitted successfully! We will call you to confirm.');
+      alert('تم تقديم الطلب بنجاح! سنتصل بك لتأكيد الطلب.');
+      
+      // Clear cart after successful order
+      clearCart();
       
     } catch (error) {
       console.error('Error submitting order:', error);
-      alert('Error submitting order. Please try again.');
+      alert('خطأ في تقديم الطلب. يرجى المحاولة مرة أخرى.');
     } finally {
       setIsSubmitting(false);
     }
@@ -125,8 +105,8 @@ export default function CheckoutPage() {
           {orderItems.length > 0 ? (
             <OrderDetails 
               items={orderItems}
-              onUpdateQuantity={updateQuantity}
-              onRemoveItem={removeItem}
+              onUpdateQuantity={handleUpdateQuantity}
+              onRemoveItem={handleRemoveItem}
             />
           ) : (
             <div className={cn(
@@ -141,10 +121,10 @@ export default function CheckoutPage() {
                 responsive.fontSize.xl,
                 theme.text.primary
               )}>
-                Your cart is empty
+                السلة فارغة
               </h3>
               <p className={cn('mb-6', theme.text.secondary)}>
-                Add some delicious items to get started
+                أضف بعض العناصر اللذيذة للبدء
               </p>
               <button
                 onClick={() => window.location.href = '/user/menu'}
@@ -153,7 +133,7 @@ export default function CheckoutPage() {
                   'bg-orange-500 hover:bg-orange-600 text-white'
                 )}
               >
-                Browse Menu
+                تصفح القائمة
               </button>
             </div>
           )}

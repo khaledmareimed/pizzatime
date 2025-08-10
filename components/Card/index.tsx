@@ -10,6 +10,7 @@ interface CardProps {
   hoverable?: boolean;
   padding?: 'sm' | 'md' | 'lg';
   rounded?: 'sm' | 'md' | 'lg' | 'xl';
+  onClick?: () => void;
 }
 
 export default function Card({
@@ -18,6 +19,7 @@ export default function Card({
   hoverable = false,
   padding = 'md',
   rounded = 'lg',
+  onClick,
 }: CardProps) {
   const baseClasses = cn(
     theme.background.card,
@@ -46,6 +48,7 @@ export default function Card({
     <motion.div
       {...animations.fadeIn}
       whileHover={hoverable ? { y: -4 } : undefined}
+      onClick={onClick}
       className={cn(
         baseClasses,
         paddingClasses[padding],

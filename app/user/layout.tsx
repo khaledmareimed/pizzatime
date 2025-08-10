@@ -1,27 +1,31 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Header from '../../components/Header';
 import Navigation from '../../components/Navigation';
-import type { FoodItem } from '../../funcs/utils';
+import { CartProvider, useCartContext } from '../../funcs/contexts/CartContext';
+import { ToastProvider, useToastContext } from '../../funcs/contexts/ToastContext';
+import { ToastContainer } from '../../components/Toast';
 
-export default function AppLayout({
+function AppLayoutContent({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [cartItems, setCartItems] = useState<FoodItem[]>([]);
+  const router = useRouter();
+  const { getTotalItems } = useCartContext();
+  const { toasts, removeToast } = useToastContext();
   const [favoritesCount, setFavoritesCount] = useState(5);
   const [activeNavItem, setActiveNavItem] = useState('home');
-  const [headerRef, setHeaderRef] = useState<any>(null);
 
   const handleCartClick = () => {
-    // Navigate to cart
-    console.log('Navigate to cart');
+    // Navigate to checkout page
+    router.push('/user/checkout');
   };
 
   const handleFavoritesClick = () => {
-    console.log('Navigate to favorites');
+    router.push('/user/favorites');
   };
 
   const handleSearchFocus = () => {
@@ -32,14 +36,14 @@ export default function AppLayout({
   const handleNavigationClick = (item: any) => {
     setActiveNavItem(item.id);
     // Handle navigation
-    console.log(`Navigate to: ${item.href}`);
+    router.push(item.href);
   };
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900" dir="rtl">
       {/* Header */}
       <Header
-        cartCount={cartItems.length}
+        cartCount={getTotalItems()}
         favoritesCount={favoritesCount}
         onCartClick={handleCartClick}
         onFavoritesClick={handleFavoritesClick}
@@ -55,9 +59,28 @@ export default function AppLayout({
       <Navigation
         activeItem={activeNavItem}
         onItemClick={handleNavigationClick}
-        cartCount={cartItems.length}
+        cartCount={getTotalItems()}
         onSearchClick={handleSearchFocus}
       />
+
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
+  );
+}
+
+export default function AppLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <CartProvider>
+      <ToastProvider>
+        <AppLayoutContent>
+          {children}
+        </AppLayoutContent>
+      </ToastProvider>
+    </CartProvider>
   );
 }

@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import Image from 'next/image';
 import { 
   Heart, 
   Star, 
@@ -16,37 +15,19 @@ import {
   Leaf,
   Camera,
   MessageSquare,
-  Check
+  Check,
+  Loader
 } from 'lucide-react';
 import { cn } from '../../../../funcs/utils';
 import { theme, responsive } from '../../../../funcs/responsive';
+import { formatPrice } from '../../../../funcs/utils';
+import { usePublicProduct } from '../../../../funcs/hooks/usePublicData';
+import { useCartContext } from '../../../../funcs/contexts/CartContext';
+import { Product } from '../../../../funcs/collections/product';
+import { CartAddon } from '../../../../funcs/types/cart';
 import Card from '../../../../components/Card';
 import Button from '../../../../components/Button';
 import FavoriteButton from '../../../../components/FavoriteButton';
-
-interface FoodItem {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  images: string[];
-  category: string;
-  rating: number;
-  reviewsCount: number;
-  prepTime: string;
-  calories: number;
-  isVegetarian: boolean;
-  isSpicy: boolean;
-  addons: {
-    category: string;
-    options: {
-      id: string;
-      name: string;
-      price: number;
-      description?: string;
-    }[];
-  }[];
-}
 
 interface SelectedAddon {
   id: string;
@@ -54,150 +35,103 @@ interface SelectedAddon {
   price: number;
 }
 
-// Sample food items data
-const foodItems: Record<string, FoodItem> = {
-  '1': {
-    id: '1',
-    name: 'Gourmet Beef Burger',
-    description: 'Premium grass-fed beef patty with truffle aioli, aged cheddar, caramelized onions, and fresh arugula on a brioche bun',
-    price: 14.99,
-    images: [
-      'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800&h=600&fit=crop',
-      'https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=800&h=600&fit=crop',
-      'https://images.unsplash.com/photo-1586816001966-79b736744398?w=800&h=600&fit=crop'
-    ],
-    category: 'Burgers',
-    rating: 4.8,
-    reviewsCount: 152,
-    prepTime: '15-20 min',
-    calories: 650,
-    isVegetarian: false,
-    isSpicy: false,
-    addons: [
-      {
-        category: 'Extra Toppings',
-        options: [
-          { id: 'cheese', name: 'Extra Cheese', price: 2.00, description: 'Aged cheddar slice' },
-          { id: 'bacon', name: 'Crispy Bacon', price: 3.50, description: 'Smoked bacon strips' },
-          { id: 'avocado', name: 'Fresh Avocado', price: 2.50, description: 'Sliced avocado' },
-          { id: 'mushrooms', name: 'Sautéed Mushrooms', price: 2.00, description: 'Button mushrooms' }
-        ]
-      },
-      {
-        category: 'Sides',
-        options: [
-          { id: 'fries', name: 'French Fries', price: 4.99, description: 'Crispy golden fries' },
-          { id: 'truffle-fries', name: 'Truffle Fries', price: 7.99, description: 'Fries with truffle oil' },
-          { id: 'onion-rings', name: 'Onion Rings', price: 5.99, description: 'Beer-battered rings' }
-        ]
-      },
-      {
-        category: 'Drinks',
-        options: [
-          { id: 'coke', name: 'Coca Cola', price: 2.99, description: '16oz fountain drink' },
-          { id: 'milkshake', name: 'Chocolate Milkshake', price: 5.99, description: 'Premium vanilla ice cream' }
-        ]
-      }
-    ]
-  },
-  '2': {
-    id: '2',
-    name: 'Margherita Pizza',
-    description: 'Fresh mozzarella, basil, and tomato sauce on a wood-fired crust with premium San Marzano tomatoes',
-    price: 16.50,
-    images: [
-      'https://images.unsplash.com/photo-1604068549290-dea0e4a305ca?w=800&h=600&fit=crop',
-      'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=800&h=600&fit=crop'
-    ],
-    category: 'Pizza',
-    rating: 4.9,
-    reviewsCount: 203,
-    prepTime: '12-15 min',
-    calories: 520,
-    isVegetarian: true,
-    isSpicy: false,
-    addons: [
-      {
-        category: 'Extra Toppings',
-        options: [
-          { id: 'extra-cheese', name: 'Extra Mozzarella', price: 3.00, description: 'Fresh mozzarella' },
-          { id: 'pepperoni', name: 'Pepperoni', price: 4.00, description: 'Spicy pepperoni slices' },
-          { id: 'olives', name: 'Black Olives', price: 2.50, description: 'Kalamata olives' },
-          { id: 'arugula', name: 'Fresh Arugula', price: 2.00, description: 'Peppery arugula leaves' }
-        ]
-      },
-      {
-        category: 'Crust Options',
-        options: [
-          { id: 'thick-crust', name: 'Thick Crust', price: 2.00, description: 'Deep dish style' },
-          { id: 'gluten-free', name: 'Gluten-Free Crust', price: 4.00, description: 'Cauliflower base' }
-        ]
-      }
-    ]
-  },
-  '3': {
-    id: '3',
-    name: 'Pad Thai',
-    description: 'Traditional Thai stir-fried rice noodles with shrimp, tofu, bean sprouts, and crushed peanuts in tamarind sauce',
-    price: 13.50,
-    images: [
-      'https://images.unsplash.com/photo-1559314809-0f31657def5e?w=800&h=600&fit=crop',
-      'https://images.unsplash.com/photo-1617093727343-374698b1b08d?w=800&h=600&fit=crop'
-    ],
-    category: 'Asian',
-    rating: 4.6,
-    reviewsCount: 89,
-    prepTime: '18-22 min',
-    calories: 480,
-    isVegetarian: false,
-    isSpicy: true,
-    addons: [
-      {
-        category: 'Protein Options',
-        options: [
-          { id: 'extra-shrimp', name: 'Extra Shrimp', price: 5.00, description: 'Fresh jumbo shrimp' },
-          { id: 'chicken', name: 'Grilled Chicken', price: 4.00, description: 'Tender chicken breast' },
-          { id: 'beef', name: 'Beef Strips', price: 6.00, description: 'Marinated beef' }
-        ]
-      },
-      {
-        category: 'Spice Level',
-        options: [
-          { id: 'mild', name: 'Mild', price: 0.00, description: 'Less spicy' },
-          { id: 'extra-spicy', name: 'Extra Spicy', price: 0.00, description: 'Thai hot level' }
-        ]
-      }
-    ]
-  }
-};
-
 export default function ItemDetailPage() {
   const params = useParams();
   const router = useRouter();
   const itemId = params.itemid as string;
+  const { addItem } = useCartContext();
+  
+  // Fetch product data from database
+  const { data: product, loading, error } = usePublicProduct(itemId);
   
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [selectedAddons, setSelectedAddons] = useState<SelectedAddon[]>([]);
   const [comments, setComments] = useState('');
   const [isAddingToCart, setIsAddingToCart] = useState(false);
-  
-  const item = foodItems[itemId];
-  
-  if (!item) {
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className={cn('min-h-screen flex items-center justify-center', theme.background.primary)}>
+        <div className="text-center">
+          <Loader className="w-8 h-8 animate-spin text-orange-500 mx-auto mb-4" />
+          <p className={cn('text-lg', theme.text.secondary)}>تحميل المنتج...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
     return (
       <div className={cn('min-h-screen flex items-center justify-center', theme.background.primary)}>
         <div className="text-center">
           <h1 className={cn('font-bold mb-4', responsive.fontSize['2xl'], theme.text.primary)}>
-            Item Not Found
+            خطأ في تحميل المنتج
           </h1>
+          <p className={cn('mb-4', theme.text.secondary)}>
+            {error}
+          </p>
+          <div className="flex gap-2 justify-center">
+            <Button onClick={() => router.back()}>
+              العودة
+            </Button>
+            <Button variant="outline" onClick={() => window.location.reload()}>
+              إعادة تحميل
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Product not found state
+  if (!product) {
+    return (
+      <div className={cn('min-h-screen flex items-center justify-center', theme.background.primary)}>
+        <div className="text-center">
+          <h1 className={cn('font-bold mb-4', responsive.fontSize['2xl'], theme.text.primary)}>
+            المنتج غير موجود
+          </h1>
+          <p className={cn('mb-4', theme.text.secondary)}>
+            المنتج المطلوب غير متوفر أو تم حذفه
+          </p>
           <Button onClick={() => router.back()}>
-            Go Back
+            العودة
           </Button>
         </div>
       </div>
     );
   }
+
+  // Product not available state
+  if (!product.available) {
+    return (
+      <div className={cn('min-h-screen flex items-center justify-center', theme.background.primary)}>
+        <div className="text-center">
+          <h1 className={cn('font-bold mb-4', responsive.fontSize['2xl'], theme.text.primary)}>
+            المنتج غير متوفر
+          </h1>
+          <p className={cn('mb-4', theme.text.secondary)}>
+            هذا المنتج غير متوفر حالياً
+          </p>
+          <Button onClick={() => router.back()}>
+            العودة
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Prepare images (use database images or fallback)
+  const productImages = product.imagesUrl && product.imagesUrl.length > 0 
+    ? product.imagesUrl 
+    : ['https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=800&h=600&fit=crop'];
+
+  // Calculate display price (use discount price if available)
+  const displayPrice = product.productDiscountPrice || product.productPrice;
+  const hasDiscount = product.productDiscountPrice && product.productDiscountPrice < product.productPrice;
 
   const toggleAddon = (addon: { id: string; name: string; price: number }) => {
     setSelectedAddons(prev => {
@@ -211,34 +145,39 @@ export default function ItemDetailPage() {
   };
 
   const calculateTotal = () => {
-    const basePrice = item.price * quantity;
+    const basePrice = displayPrice * quantity;
     const addonsPrice = selectedAddons.reduce((sum, addon) => sum + addon.price, 0) * quantity;
     return basePrice + addonsPrice;
   };
 
   const handleAddToCart = async () => {
+    if (!product) return;
+    
     setIsAddingToCart(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const cartItem = {
-      id: item.id,
-      name: item.name,
-      price: item.price,
-      quantity,
-      image: item.images[0],
-      addons: selectedAddons,
-      comments: comments.trim() || undefined
-    };
-    
-    console.log('Adding to cart:', cartItem);
-    
-    // Show success feedback
-    setIsAddingToCart(false);
-    
-    // In a real app, you would update cart state/context here
-    alert('Item added to cart!');
+    try {
+      // Convert selected addons to CartAddon format
+      const cartAddons: CartAddon[] = selectedAddons.map(addon => ({
+        id: addon.id,
+        name: addon.name,
+        price: addon.price
+      }));
+      
+      // Add item to cart with real localStorage persistence
+      addItem(product, quantity, cartAddons, comments.trim() || undefined);
+      
+      // Show success feedback
+      alert(`تم إضافة ${product.productName} إلى السلة!\nالكمية: ${quantity}\nالسعر الإجمالي: ${formatPrice(calculateTotal())}`);
+      
+      // Optionally navigate to checkout or reset form
+      // router.push('/user/checkout');
+      
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      alert('حدث خطأ في إضافة المنتج إلى السلة');
+    } finally {
+      setIsAddingToCart(false);
+    }
   };
 
   return (
@@ -254,11 +193,11 @@ export default function ItemDetailPage() {
               className="gap-2"
             >
               <ArrowLeft className="w-4 h-4" />
-              Back
+              العودة
             </Button>
             
             <FavoriteButton
-              itemId={item.id}
+              itemId={product._id.toString()}
               size="md"
             />
           </div>
@@ -275,19 +214,22 @@ export default function ItemDetailPage() {
           >
             {/* Main Image */}
             <div className="relative h-96 rounded-3xl overflow-hidden mb-4">
-              <Image
-                src={item.images[selectedImage]}
-                alt={item.name}
-                fill
-                className="object-cover"
-                priority
+              <img
+                src={productImages[selectedImage]}
+                alt={product.productName}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  // Fallback to default image if loading fails
+                  const target = e.target as HTMLImageElement;
+                  target.src = 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=800&h=600&fit=crop';
+                }}
               />
               
               {/* Image Navigation */}
-              {item.images.length > 1 && (
+              {productImages.length > 1 && (
                 <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
                   <div className="flex gap-2">
-                    {item.images.map((_, index) => (
+                    {productImages.map((_, index) => (
                       <button
                         key={index}
                         onClick={() => setSelectedImage(index)}
@@ -305,9 +247,9 @@ export default function ItemDetailPage() {
             </div>
             
             {/* Thumbnail Images */}
-            {item.images.length > 1 && (
+            {productImages.length > 1 && (
               <div className="grid grid-cols-3 gap-3">
-                {item.images.map((image, index) => (
+                {productImages.map((image, index) => (
                   <button
                     key={index}
                     onClick={() => setSelectedImage(index)}
@@ -318,11 +260,15 @@ export default function ItemDetailPage() {
                         : 'hover:opacity-80'
                     )}
                   >
-                    <Image
+                    <img
                       src={image}
-                      alt={`${item.name} ${index + 1}`}
-                      fill
-                      className="object-cover"
+                      alt={`${product.productName} ${index + 1}`}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        // Fallback to default image if loading fails
+                        const target = e.target as HTMLImageElement;
+                        target.src = 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=800&h=600&fit=crop';
+                      }}
                     />
                   </button>
                 ))}
@@ -339,26 +285,25 @@ export default function ItemDetailPage() {
             {/* Item Info */}
             <div className="mb-6">
               <div className="flex items-center gap-2 mb-2">
+                {/* Discount Badge */}
+                {hasDiscount && (
+                  <span className={cn(
+                    'px-3 py-1 rounded-full text-xs font-medium',
+                    'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+                  )}>
+                    عرض خاص
+                  </span>
+                )}
+                
+                {/* Available Status */}
                 <span className={cn(
                   'px-3 py-1 rounded-full text-xs font-medium',
-                  'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300'
+                  product.available
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                    : 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300'
                 )}>
-                  {item.category}
+                  {product.available ? 'متوفر' : 'غير متوفر'}
                 </span>
-                
-                {item.isVegetarian && (
-                  <div className="flex items-center gap-1 text-green-600">
-                    <Leaf className="w-4 h-4" />
-                    <span className="text-xs">Vegetarian</span>
-                  </div>
-                )}
-                
-                {item.isSpicy && (
-                  <div className="flex items-center gap-1 text-red-500">
-                    <Flame className="w-4 h-4" />
-                    <span className="text-xs">Spicy</span>
-                  </div>
-                )}
               </div>
               
               <h1 className={cn(
@@ -366,123 +311,108 @@ export default function ItemDetailPage() {
                 responsive.fontSize['3xl'],
                 theme.text.primary
               )}>
-                {item.name}
+                {product.productName}
               </h1>
               
-              <p className={cn(
-                'mb-4',
-                responsive.fontSize.base,
-                theme.text.secondary
-              )}>
-                {item.description}
-              </p>
+              {product.description && (
+                <p className={cn(
+                  'mb-4',
+                  responsive.fontSize.base,
+                  theme.text.secondary
+                )}>
+                  {product.description}
+                </p>
+              )}
               
-              {/* Rating and Info */}
-              <div className="flex items-center gap-6 mb-4">
-                <div className="flex items-center gap-1">
-                  <Star className="w-5 h-5 text-yellow-400 fill-current" />
-                  <span className={cn('font-medium', theme.text.primary)}>
-                    {item.rating}
+              {/* Price */}
+              <div className="mb-6">
+                <div className="flex items-center gap-3">
+                  <span className={cn(
+                    'text-2xl font-bold',
+                    'text-orange-600 dark:text-orange-400'
+                  )}>
+                    {formatPrice(displayPrice)}
                   </span>
-                  <span className={cn('text-sm', theme.text.secondary)}>
-                    ({item.reviewsCount} reviews)
-                  </span>
+                  
+                  {hasDiscount && (
+                    <span className={cn(
+                      'text-lg text-gray-500 line-through',
+                      theme.text.secondary
+                    )}>
+                      {formatPrice(product.productPrice)}
+                    </span>
+                  )}
                 </div>
                 
-                <div className="flex items-center gap-1">
-                  <Clock className="w-4 h-4 text-gray-400" />
-                  <span className={cn('text-sm', theme.text.secondary)}>
-                    {item.prepTime}
-                  </span>
-                </div>
-                
-                <span className={cn('text-sm', theme.text.secondary)}>
-                  {item.calories} cal
-                </span>
-              </div>
-              
-              <div className={cn(
-                'text-2xl font-bold mb-6',
-                'text-orange-600 dark:text-orange-400'
-              )}>
-                ${item.price.toFixed(2)}
+                {hasDiscount && (
+                  <p className="text-sm text-red-600 dark:text-red-400 mt-1">
+                    توفير {formatPrice(product.productPrice - displayPrice)}
+                  </p>
+                )}
               </div>
             </div>
 
             {/* Addons */}
-            <div className="mb-6">
-              <h3 className={cn(
-                'font-bold mb-4',
-                responsive.fontSize.lg,
-                theme.text.primary
-              )}>
-                Customize Your Order
-              </h3>
-              
-              <div className="space-y-6">
-                {item.addons.map((addonCategory) => (
-                  <div key={addonCategory.category}>
-                    <h4 className={cn(
-                      'font-medium mb-3',
-                      responsive.fontSize.base,
-                      theme.text.primary
-                    )}>
-                      {addonCategory.category}
-                    </h4>
+            {product.addonsAndToppings && product.addonsAndToppings.length > 0 && (
+              <div className="mb-6">
+                <h3 className={cn(
+                  'font-bold mb-4',
+                  responsive.fontSize.lg,
+                  theme.text.primary
+                )}>
+                  خيارات إضافية
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-3">
+                  {product.addonsAndToppings.map((addon, index) => {
+                    const addonId = `${addon.toppingName}-${index}`;
+                    const isSelected = selectedAddons.some(a => a.id === addonId);
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-3">
-                      {addonCategory.options.map((addon) => {
-                        const isSelected = selectedAddons.some(a => a.id === addon.id);
-                        
-                        return (
-                          <motion.button
-                            key={addon.id}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => toggleAddon(addon)}
-                            className={cn(
-                              'w-full p-4 rounded-xl border transition-all text-left min-h-[80px] flex flex-col justify-between',
-                              isSelected
-                                ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20'
-                                : cn(theme.border.primary, theme.background.card, 'hover:border-orange-300')
-                            )}
-                          >
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1 mr-3">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className={cn(
-                                    'font-medium',
-                                    theme.text.primary
-                                  )}>
-                                    {addon.name}
-                                  </span>
-                                  
-                                  {isSelected && (
-                                    <Check className="w-4 h-4 text-orange-500 flex-shrink-0" />
-                                  )}
-                                </div>
-                                
-                                {addon.description && (
-                                  <p className={cn('text-sm line-clamp-2', theme.text.secondary)}>
-                                    {addon.description}
-                                  </p>
-                                )}
-                              </div>
-                              
+                    return (
+                      <motion.button
+                        key={addonId}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => toggleAddon({
+                          id: addonId,
+                          name: addon.toppingName,
+                          price: addon.toppingPrice
+                        })}
+                        className={cn(
+                          'w-full p-4 rounded-xl border transition-all text-left min-h-[80px] flex flex-col justify-between',
+                          isSelected
+                            ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20'
+                            : cn(theme.border.primary, theme.background.card, 'hover:border-orange-300')
+                        )}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 mr-3">
+                            <div className="flex items-center gap-2 mb-1">
                               <span className={cn(
-                                'font-medium text-sm flex-shrink-0',
-                                isSelected ? 'text-orange-600' : theme.text.primary
+                                'font-medium',
+                                theme.text.primary
                               )}>
-                                {addon.price > 0 ? `+$${addon.price.toFixed(2)}` : 'Free'}
+                                {addon.toppingName}
                               </span>
+                              
+                              {isSelected && (
+                                <Check className="w-4 h-4 text-orange-500 flex-shrink-0" />
+                              )}
                             </div>
-                          </motion.button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
+                          </div>
+                          
+                          <span className={cn(
+                            'font-medium text-sm flex-shrink-0',
+                            isSelected ? 'text-orange-600' : theme.text.primary
+                          )}>
+                            {addon.toppingPrice > 0 ? `+${formatPrice(addon.toppingPrice)}` : 'مجاني'}
+                          </span>
+                        </div>
+                      </motion.button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Comments */}
             <div className="mb-6">
@@ -493,14 +423,14 @@ export default function ItemDetailPage() {
                   responsive.fontSize.base,
                   theme.text.primary
                 )}>
-                  Special Instructions (Optional)
+                  ملاحظات خاصة (اختياري)
                 </h4>
               </div>
               
               <textarea
                 value={comments}
                 onChange={(e) => setComments(e.target.value)}
-                placeholder="Any special requests or dietary requirements..."
+                placeholder="أي طلبات خاصة أو متطلبات غذائية..."
                 rows={3}
                 className={cn(
                   'w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-orange-500 transition-colors resize-none',
@@ -509,6 +439,7 @@ export default function ItemDetailPage() {
                   theme.text.primary,
                   'placeholder-gray-400 dark:placeholder-gray-500'
                 )}
+                dir="rtl"
               />
             </div>
 
@@ -517,7 +448,7 @@ export default function ItemDetailPage() {
               {/* Quantity Selector */}
               <div className="flex items-center justify-between">
                 <span className={cn('font-medium', theme.text.primary)}>
-                  Quantity
+                  الكمية
                 </span>
                 
                 <div className="flex items-center gap-3">
@@ -561,13 +492,13 @@ export default function ItemDetailPage() {
               )}>
                 <div className="flex items-center justify-between mb-4">
                   <span className={cn('font-medium', theme.text.primary)}>
-                    Total
+                    المجموع
                   </span>
                   <span className={cn(
                     'text-xl font-bold',
                     'text-orange-600 dark:text-orange-400'
                   )}>
-                    ${calculateTotal().toFixed(2)}
+                    {formatPrice(calculateTotal())}
                   </span>
                 </div>
                 
@@ -576,18 +507,22 @@ export default function ItemDetailPage() {
                   size="lg"
                   fullWidth
                   onClick={handleAddToCart}
-                  disabled={isAddingToCart}
+                  disabled={isAddingToCart || !product.available}
                   className="gap-2"
                 >
                   {isAddingToCart ? (
                     <>
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Adding to Cart...
+                      جاري الإضافة...
+                    </>
+                  ) : !product.available ? (
+                    <>
+                      غير متوفر
                     </>
                   ) : (
                     <>
                       <ShoppingCart className="w-5 h-5" />
-                      Add to Cart
+                      أضف إلى السلة
                     </>
                   )}
                 </Button>

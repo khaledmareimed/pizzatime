@@ -1,15 +1,23 @@
 'use client';
 
-import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import ImageBanner from '../../components/ImageBanner';
 import Offers from '../../components/Offers';
 import Products from '../../components/Products';
-import type { FoodItem, OfferItem } from '../../funcs/utils';
+import { useCartContext } from '../../funcs/contexts/CartContext';
+import type { OfferItem } from '../../funcs/utils';
+import type { Product } from '../../funcs/collections/product';
 
 export default function Home() {
-  const handleAddToCart = (item: FoodItem) => {
-    // Show toast or notification here
-    console.log(`Added ${item.name} to cart`);
+  const router = useRouter();
+  const { addItem } = useCartContext();
+
+  const handleAddToCart = (item: Product) => {
+    // Add item to real cart with localStorage persistence
+    addItem(item, 1, [], undefined);
+    
+    // Show success feedback (you could replace with a toast notification)
+    alert(`تم إضافة ${item.productName} إلى السلة!`);
   };
 
   const handleClaimOffer = (offer: OfferItem) => {
@@ -17,9 +25,9 @@ export default function Home() {
     console.log(`Claimed offer: ${offer.title}`);
   };
 
-  const handleViewDetails = (item: FoodItem) => {
-    // Handle view product details
-    console.log(`Viewing details for: ${item.name}`);
+  const handleViewDetails = (item: Product) => {
+    // Navigate to item detail page
+    router.push(`/user/item/${item._id}`);
   };
 
   const handleBannerAction = (slide: any) => {
@@ -42,6 +50,7 @@ export default function Home() {
         <Products
           onAddToCart={handleAddToCart}
           onViewDetails={handleViewDetails}
+          limit={6}
         />
       </div>
     </main>
