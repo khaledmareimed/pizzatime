@@ -10,18 +10,13 @@ import {
   Phone, 
   MapPin, 
   Edit3, 
-  Save, 
-  X, 
   LogOut,
   Shield,
   Bell,
-  Moon,
-  Sun,
   Globe,
   Heart,
   ShoppingBag,
   Clock,
-  Settings,
   Loader,
   Plus,
   Trash2
@@ -44,7 +39,6 @@ interface UserProfile {
 export default function ProfilePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [isEditing, setIsEditing] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [notifications, setNotifications] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
@@ -59,10 +53,6 @@ export default function ProfilePage() {
     totalOrders: 0,
     totalFavorites: 0,
     lastOrderDate: null as Date | null
-  });
-
-  const [editedProfile, setEditedProfile] = useState({
-    name: ''
   });
 
   // Fetch user data on component mount
@@ -97,9 +87,6 @@ export default function ProfilePage() {
       if (userResponse.ok) {
         const userData = await userResponse.json();
         setUserData(userData.data);
-        setEditedProfile({
-          name: userData.data.name || ''
-        });
       }
 
       // Fetch user addresses using direct API
@@ -141,39 +128,6 @@ export default function ProfilePage() {
     }
   };
 
-  const handleSave = async () => {
-    setIsSubmitting(true);
-    try {
-      const response = await fetch('/api/users', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(editedProfile),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUserData(data.data);
-        setIsEditing(false);
-        alert('تم حفظ التغييرات بنجاح!');
-      } else {
-        throw new Error('Failed to update profile');
-      }
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      alert('حدث خطأ في حفظ التغييرات');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleCancel = () => {
-    setEditedProfile({
-      name: userData?.name || ''
-    });
-    setIsEditing(false);
-  };
 
   const handleSignOut = () => {
     signOut();
@@ -348,39 +302,6 @@ export default function ProfilePage() {
                 )}>
                   المعلومات الشخصية
                 </h2>
-                
-                {!isEditing ? (
-                  <Button
-                    onClick={() => setIsEditing(true)}
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                  >
-                    <Edit3 className="w-4 h-4" />
-                    تعديل
-                  </Button>
-                ) : (
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={handleSave}
-                      variant="accent"
-                      size="sm"
-                      className="gap-2"
-                    >
-                      <Save className="w-4 h-4" />
-                      حفظ
-                    </Button>
-                    <Button
-                      onClick={handleCancel}
-                      variant="outline"
-                      size="sm"
-                      className="gap-2"
-                    >
-                      <X className="w-4 h-4" />
-                      إلغاء
-                    </Button>
-                  </div>
-                )}
               </div>
 
               {/* Profile Image */}
@@ -427,38 +348,6 @@ export default function ProfilePage() {
 
               {/* Profile Fields */}
               <div className="space-y-4">
-                {/* Name */}
-                <div>
-                  <label className={cn(
-                    'block text-sm font-medium mb-2',
-                    theme.text.primary
-                  )}>
-                    الاسم
-                  </label>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={editedProfile.name}
-                      onChange={(e) => setEditedProfile({...editedProfile, name: e.target.value})}
-                      className={cn(
-                        'w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-orange-500 transition-colors',
-                        theme.background.card,
-                        theme.border.primary,
-                        theme.text.primary
-                      )}
-                      dir="rtl"
-                    />
-                  ) : (
-                    <div className={cn(
-                      'flex items-center gap-3 px-4 py-3 rounded-xl',
-                      theme.background.secondary
-                    )}>
-                      <User className="w-5 h-5 text-gray-400" />
-                      <span className={theme.text.primary}>{userData?.name || 'غير محدد'}</span>
-                    </div>
-                  )}
-                </div>
-
                 {/* Email */}
                 <div>
                   <label className={cn(

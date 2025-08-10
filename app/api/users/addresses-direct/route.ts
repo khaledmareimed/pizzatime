@@ -294,6 +294,7 @@ export async function POST(request: NextRequest) {
     const sanitizedAddresses = updatedAddresses.map(addr => ({
       _id: addr._id,
       name: sanitizeString(addr.name || ''),
+      recipientName: sanitizeString(addr.recipientName || ''),
       city: sanitizeString(addr.city || ''),
       phone: sanitizeString(addr.phone || ''),
       addressDetails: sanitizeString(addr.addressDetails || ''),
@@ -357,7 +358,7 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    const { addressId, name, city, phone, addressDetails, isDefault } = body
+    const { addressId, name, recipientName, city, phone, addressDetails, isDefault } = body
 
     // Validate addressId
     if (!addressId || typeof addressId !== 'string') {
@@ -377,7 +378,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Validate input data (partial validation for updates)
-    const updateData = { name, city, phone, addressDetails, isDefault }
+    const updateData = { name, recipientName, city, phone, addressDetails, isDefault }
     const validation = validateAddressInput(updateData, true)
     if (!validation.isValid) {
       return NextResponse.json(
@@ -427,6 +428,7 @@ export async function PUT(request: NextRequest) {
 
     // Update address with sanitized data
     if (name !== undefined) existingAddresses[addressIndex].name = sanitizeString(name)
+    if (recipientName !== undefined) existingAddresses[addressIndex].recipientName = sanitizeString(recipientName)
     if (city !== undefined) existingAddresses[addressIndex].city = sanitizeString(city)
     if (phone !== undefined) existingAddresses[addressIndex].phone = sanitizeString(phone)
     if (addressDetails !== undefined) existingAddresses[addressIndex].addressDetails = sanitizeString(addressDetails)
@@ -462,6 +464,7 @@ export async function PUT(request: NextRequest) {
     const sanitizedAddresses = existingAddresses.map((addr: any) => ({
       _id: addr._id,
       name: sanitizeString(addr.name || ''),
+      recipientName: sanitizeString(addr.recipientName || ''),
       city: sanitizeString(addr.city || ''),
       phone: sanitizeString(addr.phone || ''),
       addressDetails: sanitizeString(addr.addressDetails || ''),
@@ -609,6 +612,7 @@ export async function DELETE(request: NextRequest) {
     const sanitizedAddresses = updatedAddresses.map((addr: any) => ({
       _id: addr._id,
       name: sanitizeString(addr.name || ''),
+      recipientName: sanitizeString(addr.recipientName || ''),
       city: sanitizeString(addr.city || ''),
       phone: sanitizeString(addr.phone || ''),
       addressDetails: sanitizeString(addr.addressDetails || ''),

@@ -146,19 +146,20 @@ export default function AddressForm({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm overflow-y-auto"
         onClick={onClose}
       >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          onClick={(e) => e.stopPropagation()}
-          className="w-full max-w-md"
-        >
-          <Card className="p-6">
+        <div className="min-h-full flex items-center justify-center p-4 py-8">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md max-h-[90vh] overflow-y-auto"
+          >
+          <Card className="p-4 sm:p-6 my-4">
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
               <h2 className={cn(
                 'font-bold',
                 responsive.fontSize.xl,
@@ -187,7 +188,7 @@ export default function AddressForm({
             )}
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
               {/* Address Name */}
               <div>
                 <label className={cn(
@@ -385,7 +386,8 @@ export default function AddressForm({
               </div>
             </form>
           </Card>
-        </motion.div>
+          </motion.div>
+        </div>
       </motion.div>
     </AnimatePresence>
   );
