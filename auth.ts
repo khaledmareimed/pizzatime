@@ -54,6 +54,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
       return token
     },
+    async signIn({ user, account, profile }) {
+      // Allow sign in - user creation will be handled by API routes
+      return true
+    },
   },
   debug: process.env.NODE_ENV === 'development', // Enable debug in development
 })

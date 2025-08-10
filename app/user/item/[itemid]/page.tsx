@@ -35,6 +35,12 @@ interface SelectedAddon {
   price: number;
 }
 
+interface SelectedOption {
+  optionTitle: string;
+  choiceName: string;
+  choicePrice: number;
+}
+
 export default function ItemDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -47,6 +53,7 @@ export default function ItemDetailPage() {
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [selectedAddons, setSelectedAddons] = useState<SelectedAddon[]>([]);
+  const [selectedOptions, setSelectedOptions] = useState<SelectedOption[]>([]);
   const [comments, setComments] = useState('');
   const [isAddingToCart, setIsAddingToCart] = useState(false);
 
@@ -144,14 +151,35 @@ export default function ItemDetailPage() {
     });
   };
 
+  const selectOption = (optionTitle: string, choiceName: string, choicePrice: number) => {
+    setSelectedOptions(prev => {
+      // Remove any existing selection for this option group
+      const filtered = prev.filter(opt => opt.optionTitle !== optionTitle);
+      // Add the new selection
+      return [...filtered, { optionTitle, choiceName, choicePrice }];
+    });
+  };
+
   const calculateTotal = () => {
     const basePrice = displayPrice * quantity;
     const addonsPrice = selectedAddons.reduce((sum, addon) => sum + addon.price, 0) * quantity;
-    return basePrice + addonsPrice;
+    const optionsPrice = selectedOptions.reduce((sum, option) => sum + option.choicePrice, 0) * quantity;
+    return basePrice + addonsPrice + optionsPrice;
   };
 
   const handleAddToCart = async () => {
     if (!product) return;
+    
+    // Check if all required options are selected
+    const requiredOptions = product.productOptions?.filter(opt => opt.isRequired) || [];
+    const missingRequiredOptions = requiredOptions.filter(reqOpt => 
+      !selectedOptions.some(selOpt => selOpt.optionTitle === reqOpt.optionTitle)
+    );
+    
+    if (missingRequiredOptions.length > 0) {
+      alert(`يرجى اختيار: ${missingRequiredOptions.map(opt => opt.optionTitle).join(', ')}`);
+      return;
+    }
     
     setIsAddingToCart(true);
     
@@ -163,8 +191,15 @@ export default function ItemDetailPage() {
         price: addon.price
       }));
       
+      // Convert selected options to CartOption format
+      const cartOptions = selectedOptions.map(option => ({
+        optionTitle: option.optionTitle,
+        choiceName: option.choiceName,
+        choicePrice: option.choicePrice
+      }));
+      
       // Add item to cart with real localStorage persistence
-      addItem(product, quantity, cartAddons, comments.trim() || undefined);
+      addItem(product, quantity, cartAddons, cartOptions, comments.trim() || undefined);
       
       // Show success feedback
       alert(`تم إضافة ${product.productName} إلى السلة!\nالكمية: ${quantity}\nالسعر الإجمالي: ${formatPrice(calculateTotal())}`);
@@ -351,6 +386,94 @@ export default function ItemDetailPage() {
                 )}
               </div>
             </div>
+
+            {/* Product Options */}
+            {product.productOptions && product.productOptions.length > 0 && (
+              <div className="mb-6">
+                <h3 className={cn(
+                  'font-bold mb-4',
+                  responsive.fontSize.lg,
+                  theme.text.primary
+                )}>
+                  خيارات المنتج
+                </h3>
+                
+                <div className="space-y-6">
+                  {product.productOptions.map((option, optionIndex) => {
+                    const selectedChoice = selectedOptions.find(sel => sel.optionTitle === option.optionTitle);
+                    
+                    return (
+                      <div key={optionIndex} className={cn(
+                        'p-4 rounded-xl border',
+                        theme.border.primary,
+                        theme.background.card
+                      )}>
+                        <div className="flex items-center gap-2 mb-3">
+                          <h4 className={cn(
+                            'font-medium',
+                            responsive.fontSize.base,
+                            theme.text.primary
+                          )}>
+                            {option.optionTitle}
+                          </h4>
+                          {option.isRequired && (
+                            <span className="text-xs px-2 py-1 bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 rounded-full">
+                              مطلوب
+                            </span>
+                          )}
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {option.choices.map((choice, choiceIndex) => {
+                            const isSelected = selectedChoice?.choiceName === choice.choiceName;
+                            
+                            return (
+                              <motion.button
+                                key={choiceIndex}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => selectOption(option.optionTitle, choice.choiceName, choice.choicePrice)}
+                                className={cn(
+                                  'w-full p-3 rounded-lg border transition-all text-left flex items-center justify-between',
+                                  isSelected
+                                    ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20'
+                                    : cn(theme.border.primary, theme.background.card, 'hover:border-orange-300')
+                                )}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <div className={cn(
+                                    'w-4 h-4 rounded-full border-2 flex items-center justify-center',
+                                    isSelected 
+                                      ? 'border-orange-500 bg-orange-500' 
+                                      : 'border-gray-300 dark:border-gray-600'
+                                  )}>
+                                    {isSelected && (
+                                      <div className="w-2 h-2 bg-white rounded-full" />
+                                    )}
+                                  </div>
+                                  <span className={cn(
+                                    'font-medium',
+                                    theme.text.primary
+                                  )}>
+                                    {choice.choiceName}
+                                  </span>
+                                </div>
+                                
+                                <span className={cn(
+                                  'font-medium text-sm',
+                                  isSelected ? 'text-orange-600' : theme.text.primary
+                                )}>
+                                  {choice.choicePrice > 0 ? `+${formatPrice(choice.choicePrice)}` : 'مجاني'}
+                                </span>
+                              </motion.button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Addons */}
             {product.addonsAndToppings && product.addonsAndToppings.length > 0 && (

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Heart } from 'lucide-react';
 import { cn } from '../../funcs/utils';
+import { useFavorites } from '../../funcs/contexts/FavoritesContext';
 
 interface FavoriteButtonProps {
   itemId: string;
@@ -20,8 +21,11 @@ export default function FavoriteButton({
   size = 'md',
   className
 }: FavoriteButtonProps) {
-  const [isFavorited, setIsFavorited] = useState(initialFavorited);
+  const { isFavorite, toggleFavorite } = useFavorites();
   const [isAnimating, setIsAnimating] = useState(false);
+  
+  // Use context state instead of local state
+  const isFavorited = isFavorite(itemId);
 
   const sizeClasses = {
     sm: 'w-8 h-8',
@@ -35,10 +39,17 @@ export default function FavoriteButton({
     lg: 'w-6 h-6'
   };
 
-  const handleToggle = () => {
+  const handleToggle = async () => {
     setIsAnimating(true);
-    setIsFavorited(!isFavorited);
-    onToggle?.(itemId, !isFavorited);
+    
+    try {
+      const success = await toggleFavorite(itemId);
+      if (success) {
+        onToggle?.(itemId, !isFavorited);
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
     
     // Reset animation state
     setTimeout(() => setIsAnimating(false), 300);

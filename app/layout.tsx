@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SessionProvider } from "@/components/Auth/SessionProvider";
-import { initializeApplication } from "@/funcs/startup";
+import { FavoritesProvider } from "@/funcs/contexts/FavoritesContext";
+import { CartProvider } from "@/funcs/contexts/CartContext";
+import UserInitializer from "@/components/UserInitializer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,17 +21,11 @@ export const metadata: Metadata = {
   description: "Order from your favorite restaurants and get fresh, hot food delivered to your doorstep in minutes.",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Initialize database and collections on app startup
-  try {
-    await initializeApplication()
-  } catch (error) {
-    console.error('Failed to initialize application:', error)
-  }
 
   return (
     <html lang="ar" dir="rtl">
@@ -37,7 +33,12 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <SessionProvider>
-          {children}
+          <FavoritesProvider>
+            <CartProvider>
+              <UserInitializer />
+              {children}
+            </CartProvider>
+          </FavoritesProvider>
         </SessionProvider>
       </body>
     </html>

@@ -13,6 +13,12 @@ export interface CartAddon {
   price: number
 }
 
+export interface CartOption {
+  optionTitle: string
+  choiceName: string
+  choicePrice: number
+}
+
 export interface CartItem {
   id: string // Product ID
   productId: string // Same as id, for clarity
@@ -23,6 +29,7 @@ export interface CartItem {
   quantity: number
   image: string // Primary product image
   addons: CartAddon[]
+  options: CartOption[]
   comments?: string
   addedAt: string // ISO timestamp
   categoryId: string
@@ -34,6 +41,7 @@ export interface CartSummary {
   totalQuantity: number
   subtotal: number
   addonsTotal: number
+  optionsTotal: number
   total: number
 }
 
@@ -73,6 +81,7 @@ export function createCartItemFromProduct(
   product: Product,
   quantity: number = 1,
   addons: CartAddon[] = [],
+  options: CartOption[] = [],
   comments?: string
 ): CartItem {
   const displayPrice = product.productDiscountPrice || product.productPrice
@@ -90,6 +99,7 @@ export function createCartItemFromProduct(
     quantity,
     image: primaryImage,
     addons,
+    options,
     comments,
     addedAt: new Date().toISOString(),
     categoryId: product.categoryId,
@@ -105,13 +115,18 @@ export function calculateCartSummary(items: CartItem[]): CartSummary {
     const itemAddonsTotal = item.addons.reduce((addonSum, addon) => addonSum + addon.price, 0)
     return sum + (itemAddonsTotal * item.quantity)
   }, 0)
-  const total = subtotal + addonsTotal
+  const optionsTotal = items.reduce((sum, item) => {
+    const itemOptionsTotal = item.options.reduce((optionSum, option) => optionSum + option.choicePrice, 0)
+    return sum + (itemOptionsTotal * item.quantity)
+  }, 0)
+  const total = subtotal + addonsTotal + optionsTotal
 
   return {
     totalItems: items.length,
     totalQuantity,
     subtotal,
     addonsTotal,
+    optionsTotal,
     total
   }
 }

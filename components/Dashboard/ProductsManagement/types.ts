@@ -8,6 +8,15 @@ export interface Category {
   color?: string
 }
 
+export interface ProductOption {
+  optionTitle: string
+  isRequired: boolean
+  choices: Array<{
+    choiceName: string
+    choicePrice: number
+  }>
+}
+
 export interface Product {
   _id: string
   productName: string
@@ -18,6 +27,7 @@ export interface Product {
     toppingName: string
     toppingPrice: number
   }>
+  productOptions: ProductOption[]
   description?: string
   available: boolean
   visible: boolean
@@ -47,6 +57,7 @@ export interface ProductForm {
     toppingName: string
     toppingPrice: number
   }>
+  productOptions: ProductOption[]
 }
 
 export interface DeleteConfirmData {

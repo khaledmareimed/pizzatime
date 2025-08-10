@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ShoppingBag, Tag } from 'lucide-react';
 import { cn } from '../../funcs/utils';
 import { theme, responsive } from '../../funcs/responsive';
@@ -18,27 +18,89 @@ interface OrderDetailsProps {
 
 export default function OrderDetails({ items, onUpdateQuantity, onRemoveItem }: OrderDetailsProps) {
   const [couponCode, setCouponCode] = useState('');
-  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<{ 
+    code: string; 
+    name: string;
+    discountAmount: number;
+    discountType: string;
+    discountValue: number;
+  } | null>(null);
   const [couponError, setCouponError] = useState('');
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+  const [isRevalidatingCoupon, setIsRevalidatingCoupon] = useState(false);
 
   const calculateItemTotal = (item: OrderItem) => {
     const basePrice = item.price;
     const addonsPrice = item.addons?.reduce((sum, addon) => sum + addon.price, 0) || 0;
-    return (basePrice + addonsPrice) * item.quantity;
+    const optionsPrice = item.options?.reduce((sum, option) => sum + option.choicePrice, 0) || 0;
+    return (basePrice + addonsPrice + optionsPrice) * item.quantity;
   };
 
   const subtotal = items.reduce((sum, item) => sum + calculateItemTotal(item), 0);
-  const couponDiscount = appliedCoupon ? (subtotal * appliedCoupon.discount) : 0;
+  const couponDiscount = appliedCoupon ? appliedCoupon.discountAmount : 0;
   const total = subtotal - couponDiscount;
 
-  // كوبونات متاحة - في التطبيق الحقيقي، هذا سيأتي من الخادم
-  const validCoupons = {
-    'SAVE10': { discount: 0.10, description: 'خصم 10% على طلبك' },
-    'WELCOME20': { discount: 0.20, description: 'خصم 20% للعملاء الجدد' },
-    'FOOD15': { discount: 0.15, description: 'خصم 15% على المأكولات' }
+  // Re-validate coupon when items change
+  useEffect(() => {
+    if (appliedCoupon && items.length > 0) {
+      revalidateCoupon();
+    }
+  }, [items, subtotal]); // Re-run when items or subtotal changes
+
+  const revalidateCoupon = async () => {
+    if (!appliedCoupon) return;
+
+    setIsRevalidatingCoupon(true);
+
+    try {
+      // Prepare order data for validation
+      const categoryIds = [...new Set(items.map(item => item.categoryId).filter(Boolean))]
+      const productIds = items.map(item => item.id).filter(Boolean)
+      
+      const orderData = {
+        orderTotal: subtotal,
+        categoryIds: categoryIds,
+        productIds: productIds
+      };
+
+      const response = await fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          couponCode: appliedCoupon.code,
+          orderData
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Update coupon with new discount amount
+        setAppliedCoupon({
+          code: data.data.code,
+          name: data.data.name,
+          discountAmount: data.data.discountAmount,
+          discountType: data.data.discountType,
+          discountValue: data.data.discountValue
+        });
+        setCouponError('');
+      } else {
+        // Coupon is no longer valid, remove it
+        setAppliedCoupon(null);
+        setCouponError(`تم إلغاء القسيمة: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Error revalidating coupon:', error);
+      // Keep the coupon but show a warning
+      setCouponError('تعذر التحقق من صحة القسيمة');
+    } finally {
+      setIsRevalidatingCoupon(false);
+    }
   };
 
-  const applyCoupon = () => {
+  const applyCoupon = async () => {
     setCouponError('');
     
     if (!couponCode.trim()) {
@@ -46,17 +108,57 @@ export default function OrderDetails({ items, onUpdateQuantity, onRemoveItem }: 
       return;
     }
 
-    const coupon = validCoupons[couponCode.toUpperCase() as keyof typeof validCoupons];
-    
-    if (coupon) {
-      setAppliedCoupon({
-        code: couponCode.toUpperCase(),
-        discount: coupon.discount
+    setIsValidatingCoupon(true);
+
+    try {
+      // Prepare order data for validation
+      const categoryIds = [...new Set(items.map(item => item.categoryId).filter(Boolean))]
+      const productIds = items.map(item => item.id).filter(Boolean)
+      
+      const orderData = {
+        orderTotal: subtotal,
+        categoryIds: categoryIds,
+        productIds: productIds
+      };
+
+      // Debug logging
+      console.log('Sending coupon validation data:', {
+        couponCode: couponCode.trim(),
+        orderData,
+        itemsCount: items.length
       });
-      setCouponCode('');
-      setCouponError('');
-    } else {
-      setCouponError('رمز قسيمة غير فعال أو خاطئ');
+
+      const response = await fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          couponCode: couponCode.trim(),
+          orderData
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setAppliedCoupon({
+          code: data.data.code,
+          name: data.data.name,
+          discountAmount: data.data.discountAmount,
+          discountType: data.data.discountType,
+          discountValue: data.data.discountValue
+        });
+        setCouponCode('');
+        setCouponError('');
+      } else {
+        setCouponError(data.error || 'رمز قسيمة غير فعال أو خاطئ');
+      }
+    } catch (error) {
+      console.error('Error validating coupon:', error);
+      setCouponError('حدث خطأ في التحقق من القسيمة');
+    } finally {
+      setIsValidatingCoupon(false);
     }
   };
 
@@ -122,12 +224,14 @@ export default function OrderDetails({ items, onUpdateQuantity, onRemoveItem }: 
                 </div>
                 <button
                   onClick={applyCoupon}
+                  disabled={isValidatingCoupon}
                   className={cn(
                     'px-4 py-2 text-sm font-medium rounded-xl transition-colors',
-                    'bg-orange-500 hover:bg-orange-600 text-white'
+                    'bg-orange-500 hover:bg-orange-600 text-white',
+                    'disabled:opacity-50 disabled:cursor-not-allowed'
                   )}
                 >
-                  تطبيق
+                  {isValidatingCoupon ? 'جاري التحقق...' : 'تطبيق'}
                 </button>
               </div>
               {couponError && (
@@ -145,8 +249,14 @@ export default function OrderDetails({ items, onUpdateQuantity, onRemoveItem }: 
                   {appliedCoupon.code}
                 </span>
                 <span className="text-xs text-green-600 dark:text-green-400">
-                  (-{(appliedCoupon.discount * 100).toFixed(0)}%)
+                  {appliedCoupon.discountType === 'percentage' 
+                    ? `(-${appliedCoupon.discountValue}%)`
+                    : `(-${appliedCoupon.discountValue} د.أ)`
+                  }
                 </span>
+                {isRevalidatingCoupon && (
+                  <div className="w-3 h-3 border border-green-600 border-t-transparent rounded-full animate-spin" />
+                )}
               </div>
               <button
                 onClick={removeCoupon}

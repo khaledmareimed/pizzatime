@@ -1,0 +1,16 @@
+instructions:
+  - name: Main Rule Build with Components First
+    description: Core principle for component-based architecture and reusable UI development
+    content_file: main-rule-build-with-components-first.md
+  - name: security
+    description: if want to use a function make it in a folder called funcs and then use it dont add it directly to the ui make sure to make the security number 1 make sure the ui dark and light depending on the mobile sittings and make sure the ui the same of the over all app ui
+    content_file: security.md
+  - name: desing
+    description: design of the app and the way of creating the ui
+    content_file: desing.md
+  - name: Coding workflow preferences
+    description: Coding workflow preferences
+    content_file: coding-workflow-preferences.md
+  - name: Coding Coding pattern preferences
+    description: Coding pattern preferences
+    content_file: coding-coding-pattern-preferences.md

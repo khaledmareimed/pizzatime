@@ -12,10 +12,16 @@ export interface OrderItem {
   price: number;
   quantity: number;
   image: string;
+  categoryId?: string;
   addons?: {
     id: string;
     name: string;
     price: number;
+  }[];
+  options?: {
+    optionTitle: string;
+    choiceName: string;
+    choicePrice: number;
   }[];
   comments?: string;
 }
@@ -30,7 +36,8 @@ export default function FoodItem({ item, onUpdateQuantity, onRemoveItem }: FoodI
   const calculateItemTotal = (item: OrderItem) => {
     const basePrice = item.price;
     const addonsPrice = item.addons?.reduce((sum, addon) => sum + addon.price, 0) || 0;
-    return (basePrice + addonsPrice) * item.quantity;
+    const optionsPrice = item.options?.reduce((sum, option) => sum + option.choicePrice, 0) || 0;
+    return (basePrice + addonsPrice + optionsPrice) * item.quantity;
   };
 
   return (
@@ -76,6 +83,27 @@ export default function FoodItem({ item, onUpdateQuantity, onRemoveItem }: FoodI
               <Trash2 className="w-4 h-4" />
             </button>
           </div>
+
+          {/* Options */}
+          {item.options && item.options.length > 0 && (
+            <div className="mb-3">
+              <p className={cn('text-xs font-medium mb-1', theme.text.secondary)}>
+                الخيارات المختارة:
+              </p>
+              <div className="space-y-1">
+                {item.options.map((option, index) => (
+                  <div key={index} className="flex justify-between text-xs">
+                    <span className={theme.text.secondary}>
+                      {option.optionTitle}: {option.choiceName}
+                    </span>
+                    <span className={theme.text.primary}>
+                      {option.choicePrice > 0 ? `+${option.choicePrice.toFixed(2)} ر.س` : 'مجاني'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Addons */}
           {item.addons && item.addons.length > 0 && (

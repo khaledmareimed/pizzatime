@@ -1,43 +1,94 @@
+'use client'
+
 import Link from 'next/link'
+import { motion } from 'framer-motion'
+import { ShieldX, Home, LogIn } from 'lucide-react'
+import { cn } from '@/funcs/utils'
+import { theme, responsive, animations } from '@/funcs/responsive'
 import Button from '@/components/Button'
-import { ShieldX } from 'lucide-react'
-import { theme } from '@/funcs/responsive'
+import Card from '@/components/Card'
 
 export default function UnauthorizedPage() {
   return (
-    <div className={`min-h-screen flex items-center justify-center ${theme.background.secondary}`}>
-      <div className="max-w-md w-full space-y-8 p-8 text-center">
-        <div>
-          <div className="mx-auto h-16 w-16 text-red-500 dark:text-red-400 mb-6">
-            <ShieldX size={64} />
-          </div>
-          <h2 className={`text-3xl font-bold ${theme.text.primary} mb-4`}>
+    <div className={cn(
+      'min-h-screen flex items-center justify-center p-4',
+      theme.background.primary
+    )}>
+      <motion.div 
+        {...animations.fadeIn}
+        className={cn('w-full', responsive.container.sm)}
+      >
+        <Card className="text-center space-y-6">
+          {/* Unauthorized Icon */}
+          <motion.div 
+            {...animations.scaleIn}
+            className={cn(
+              'inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4',
+              'bg-red-100 dark:bg-red-900/30'
+            )}
+          >
+            <ShieldX className="w-8 h-8 text-red-500" />
+          </motion.div>
+
+          {/* Title */}
+          <h1 className={cn(
+            'font-bold mb-3',
+            responsive.fontSize['3xl'],
+            theme.text.primary
+          )}>
             غير مخول للوصول
-          </h2>
-          <p className={`${theme.text.secondary} mb-8`}>
+          </h1>
+
+          {/* Description */}
+          <p className={cn(
+            'mb-6',
+            responsive.fontSize.base,
+            theme.text.secondary
+          )}>
             عذراً، لا تملك الصلاحيات اللازمة للوصول إلى هذه الصفحة. هذه المنطقة مخصصة للإدارة فقط.
           </p>
           
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
-            <p className="text-sm text-yellow-800 dark:text-yellow-200">
+          {/* Warning Note */}
+          <div className={cn(
+            'p-4 rounded-xl border',
+            'bg-yellow-50 dark:bg-yellow-900/20',
+            'border-yellow-200 dark:border-yellow-800'
+          )}>
+            <p className={cn(
+              'text-sm',
+              'text-yellow-800 dark:text-yellow-200'
+            )}>
               <strong>ملاحظة:</strong> إذا كنت تعتقد أن هذا خطأ، يرجى التواصل مع الإدارة.
             </p>
           </div>
 
-          <div className="space-y-4">
+          {/* Action Buttons */}
+          <div className="space-y-3 pt-4">
             <Link href="/">
-              <Button className="w-full">
+              <Button 
+                variant="accent" 
+                size="lg" 
+                fullWidth
+                className="gap-2"
+              >
+                <Home className="w-4 h-4" />
                 العودة للرئيسية
               </Button>
             </Link>
             <Link href="/auth/signin">
-              <Button variant="outline" className="w-full">
+              <Button 
+                variant="outline" 
+                size="lg" 
+                fullWidth
+                className="gap-2"
+              >
+                <LogIn className="w-4 h-4" />
                 تسجيل دخول بحساب آخر
               </Button>
             </Link>
           </div>
-        </div>
-      </div>
+        </Card>
+      </motion.div>
     </div>
   )
 }

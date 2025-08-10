@@ -1,99 +1,93 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Heart, ShoppingCart, Star, Trash2 } from 'lucide-react';
+import { Heart, ShoppingCart, Star, Trash2, Loader } from 'lucide-react';
 import { cn } from '../../../funcs/utils';
 import { theme, responsive } from '../../../funcs/responsive';
+import { Product } from '../../../funcs/collections/product';
+import { useCartContext } from '../../../funcs/contexts/CartContext';
+import { useFavorites } from '../../../funcs/contexts/FavoritesContext';
 import Card from '../../../components/Card';
 import Button from '../../../components/Button';
 
-interface FavoriteItem {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  image: string;
-  rating: number;
-  category: string;
-  addedAt: Date;
-}
-
-// Sample favorite items
-const sampleFavorites: FavoriteItem[] = [
-  {
-    id: '1',
-    name: 'Gourmet Burger',
-    description: 'Premium beef patty with truffle aioli, arugula, and aged cheddar',
-    price: 14.99,
-    image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=400&fit=crop',
-    rating: 4.8,
-    category: 'Burgers',
-    addedAt: new Date('2025-08-05')
-  },
-  {
-    id: '2',
-    name: 'Margherita Pizza',
-    description: 'Fresh mozzarella, basil, tomato sauce on wood-fired crust',
-    price: 16.50,
-    image: 'https://images.unsplash.com/photo-1604068549290-dea0e4a305ca?w=400&h=400&fit=crop',
-    rating: 4.9,
-    category: 'Pizza',
-    addedAt: new Date('2025-08-04')
-  },
-  {
-    id: '3',
-    name: 'Chocolate Lava Cake',
-    description: 'Warm chocolate cake with molten center, served with vanilla ice cream',
-    price: 8.99,
-    image: 'https://images.unsplash.com/photo-1624353365286-3f8d62daad51?w=400&h=400&fit=crop',
-    rating: 4.7,
-    category: 'Desserts',
-    addedAt: new Date('2025-08-03')
-  },
-  {
-    id: '4',
-    name: 'Caesar Salad',
-    description: 'Crisp romaine lettuce, parmesan cheese, croutons, caesar dressing',
-    price: 11.99,
-    image: 'https://images.unsplash.com/photo-1550304943-4f24f54ddde9?w=400&h=400&fit=crop',
-    rating: 4.5,
-    category: 'Salads',
-    addedAt: new Date('2025-08-02')
-  },
-  {
-    id: '5',
-    name: 'Pad Thai',
-    description: 'Traditional Thai stir-fried noodles with shrimp, tofu, and peanuts',
-    price: 13.50,
-    image: 'https://images.unsplash.com/photo-1559314809-0f31657def5e?w=400&h=400&fit=crop',
-    rating: 4.6,
-    category: 'Asian',
-    addedAt: new Date('2025-08-01')
-  }
-];
-
 export default function FavoritesPage() {
-  const [favorites, setFavorites] = useState<FavoriteItem[]>(sampleFavorites);
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const { addItem } = useCartContext();
+  const { favorites, isLoading, removeFromFavorites } = useFavorites();
+  const [isRemoving, setIsRemoving] = useState<string | null>(null);
 
-  const categories = ['All', ...Array.from(new Set(favorites.map(item => item.category)))];
+  // No need to fetch favorites manually - context handles it
 
-  const filteredFavorites = selectedCategory === 'All' 
-    ? favorites 
-    : favorites.filter(item => item.category === selectedCategory);
-
-  const removeFromFavorites = (itemId: string) => {
-    setFavorites(prev => prev.filter(item => item.id !== itemId));
+  const handleRemoveFromFavorites = async (productId: string) => {
+    if (!session?.user?.email) return;
+    
+    setIsRemoving(productId);
+    try {
+      const success = await removeFromFavorites(productId);
+      if (success) {
+        alert('تم إزالة المنتج من المفضلة!');
+      } else {
+        alert('حدث خطأ في إزالة المنتج من المفضلة');
+      }
+    } catch (error) {
+      console.error('Error removing from favorites:', error);
+      alert('حدث خطأ في إزالة المنتج من المفضلة');
+    } finally {
+      setIsRemoving(null);
+    }
   };
 
-  const addToCart = (item: FavoriteItem) => {
-    // In a real app, this would add the item to cart state/context
-    console.log('Added to cart:', item);
+  const addToCart = (item: Product) => {
+    // Add item to real cart with localStorage persistence
+    addItem(item, 1, [], undefined);
+    
     // Show success feedback
-    alert(`${item.name} added to cart!`);
+    alert(`تم إضافة ${item.productName} إلى السلة!`);
   };
+
+  const handleViewDetails = (item: Product) => {
+    router.push(`/user/item/${item._id}`);
+  };
+
+  // Redirect if not authenticated
+  if (status === 'loading' || isLoading) {
+    return (
+      <div className={cn('min-h-screen flex items-center justify-center', theme.background.primary)}>
+        <div className="text-center">
+          <Loader className="w-8 h-8 animate-spin text-orange-500 mx-auto mb-4" />
+          <p className={cn('text-lg', theme.text.secondary)}>تحميل المفضلة...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <div className={cn('min-h-screen flex items-center justify-center', theme.background.primary)}>
+        <div className="text-center">
+          <Heart className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+          <h2 className={cn('font-bold mb-4', responsive.fontSize['2xl'], theme.text.primary)}>
+            تسجيل الدخول مطلوب
+          </h2>
+          <p className={cn('mb-6', theme.text.secondary)}>
+            يجب تسجيل الدخول لعرض المفضلة
+          </p>
+          <Button
+            onClick={() => router.push('/auth/signin')}
+            variant="accent"
+            size="lg"
+          >
+            تسجيل الدخول
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={cn('min-h-screen', theme.background.primary)}>
@@ -115,7 +109,7 @@ export default function FavoritesPage() {
                 responsive.fontSize['3xl'],
                 theme.text.primary
               )}>
-                Your Favorites
+                المفضلة
               </h1>
             </div>
             <p className={cn(
@@ -123,7 +117,7 @@ export default function FavoritesPage() {
               responsive.fontSize.lg,
               theme.text.secondary
             )}>
-              Your handpicked collection of delicious items you love
+              مجموعتك المختارة من الأطباق اللذيذة المفضلة لديك
             </p>
           </motion.div>
         </div>
@@ -145,54 +139,25 @@ export default function FavoritesPage() {
               responsive.fontSize['2xl'],
               theme.text.primary
             )}>
-              No Favorites Yet
+              لا توجد مفضلة بعد
             </h2>
             <p className={cn(
               'max-w-md mx-auto mb-8',
               responsive.fontSize.base,
               theme.text.secondary
             )}>
-              Start exploring our menu and save your favorite dishes by clicking the heart icon
+              ابدأ في استكشاف قائمتنا واحفظ أطباقك المفضلة بالنقر على أيقونة القلب
             </p>
             <Button
               variant="accent"
               size="lg"
-              onClick={() => window.location.href = '/user/menu'}
+              onClick={() => router.push('/user/menu')}
             >
-              Browse Menu
+              تصفح القائمة
             </Button>
           </motion.div>
         ) : (
           <>
-            {/* Category Filter */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              className="mb-8"
-            >
-              <div className="flex flex-wrap gap-3 justify-center">
-                {categories.map((category) => (
-                  <button
-                    key={category}
-                    onClick={() => setSelectedCategory(category)}
-                    className={cn(
-                      'px-6 py-3 rounded-2xl font-medium transition-all duration-300',
-                      selectedCategory === category
-                        ? 'bg-orange-500 text-white shadow-lg transform scale-105'
-                        : cn(
-                            'text-gray-600 dark:text-gray-400 hover:text-orange-500',
-                            theme.background.card,
-                            'hover:shadow-md'
-                          )
-                    )}
-                  >
-                    {category}
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-
             {/* Favorites Grid */}
             <motion.div
               initial={{ opacity: 0 }}
@@ -200,105 +165,133 @@ export default function FavoritesPage() {
               transition={{ duration: 0.5, delay: 0.2 }}
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
             >
-              {filteredFavorites.map((item, index) => (
-                <motion.div
-                  key={item.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                >
-                  <Card className="group hover:shadow-2xl transition-all duration-300 overflow-hidden">
-                    {/* Image */}
-                    <div className="relative h-48 overflow-hidden">
-                      <Image
-                        src={item.image}
-                        alt={item.name}
-                        fill
-                        className="object-cover group-hover:scale-110 transition-transform duration-300"
-                      />
-                      
-                      {/* Remove from Favorites Button */}
-                      <button
-                        onClick={() => removeFromFavorites(item.id)}
-                        className={cn(
-                          'absolute top-3 right-3 w-10 h-10 rounded-full flex items-center justify-center',
-                          'bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm',
-                          'text-red-500 hover:text-red-600 hover:bg-white dark:hover:bg-gray-800',
-                          'transition-all duration-200 hover:scale-110'
-                        )}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+              {favorites.map((item, index) => {
+                // Get the primary image URL (first image or placeholder)
+                const primaryImage = item.imagesUrl && item.imagesUrl.length > 0 
+                  ? item.imagesUrl[0] 
+                  : 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=400&fit=crop';
+                
+                // Calculate display price (use discount price if available)
+                const displayPrice = item.productDiscountPrice || item.productPrice;
+                const hasDiscount = item.productDiscountPrice && item.productDiscountPrice < item.productPrice;
 
-                      {/* Category Badge */}
-                      <div className="absolute top-3 left-3">
-                        <span className={cn(
-                          'px-3 py-1 rounded-full text-xs font-medium',
-                          'bg-orange-500 text-white'
-                        )}>
-                          {item.category}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Content */}
-                    <div className="p-6">
-                      <div className="flex items-start justify-between mb-2">
-                        <h3 className={cn(
-                          'font-bold',
-                          responsive.fontSize.lg,
-                          theme.text.primary
-                        )}>
-                          {item.name}
-                        </h3>
+                return (
+                  <motion.div
+                    key={item._id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                  >
+                    <Card className="group hover:shadow-2xl transition-all duration-300 overflow-hidden">
+                      {/* Image */}
+                      <div className="relative h-48 overflow-hidden cursor-pointer" onClick={() => handleViewDetails(item)}>
+                        <img
+                          src={primaryImage}
+                          alt={item.productName}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=400&fit=crop';
+                          }}
+                        />
                         
-                        {/* Rating */}
-                        <div className="flex items-center gap-1">
-                          <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                          <span className={cn('text-sm font-medium', theme.text.primary)}>
-                            {item.rating}
-                          </span>
-                        </div>
-                      </div>
-
-                      <p className={cn(
-                        'text-sm mb-4 line-clamp-2',
-                        theme.text.secondary
-                      )}>
-                        {item.description}
-                      </p>
-
-                      {/* Price and Actions */}
-                      <div className="flex items-center justify-between">
-                        <span className={cn(
-                          'font-bold',
-                          responsive.fontSize.lg,
-                          'text-orange-600 dark:text-orange-400'
-                        )}>
-                          ${item.price.toFixed(2)}
-                        </span>
-
-                        <Button
-                          variant="accent"
-                          size="sm"
-                          onClick={() => addToCart(item)}
-                          className="group/btn"
+                        {/* Discount Badge */}
+                        {hasDiscount && (
+                          <div className="absolute top-3 left-3 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                            عرض خاص
+                          </div>
+                        )}
+                        
+                        {/* Remove from Favorites Button */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveFromFavorites(item._id);
+                          }}
+                          disabled={isRemoving === item._id}
+                          className={cn(
+                            'absolute top-3 right-3 w-10 h-10 rounded-full flex items-center justify-center',
+                            'bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm',
+                            'text-red-500 hover:text-red-600 hover:bg-white dark:hover:bg-gray-800',
+                            'transition-all duration-200 hover:scale-110',
+                            isRemoving === item._id && 'opacity-50 cursor-not-allowed'
+                          )}
                         >
-                          <ShoppingCart className="w-4 h-4 mr-2 group-hover/btn:scale-110 transition-transform" />
-                          Add to Cart
-                        </Button>
+                          {isRemoving === item._id ? (
+                            <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
+                        </button>
+
                       </div>
 
-                      {/* Added Date */}
-                      <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-                        <p className={cn('text-xs', theme.text.secondary)}>
-                          Added {item.addedAt.toLocaleDateString()}
-                        </p>
+                      {/* Content */}
+                      <div className="p-6">
+                        <div className="flex items-start justify-between mb-2">
+                          <h3 className={cn(
+                            'font-bold cursor-pointer',
+                            responsive.fontSize.lg,
+                            theme.text.primary
+                          )}
+                          onClick={() => handleViewDetails(item)}
+                          >
+                            {item.productName}
+                          </h3>
+                        </div>
+
+                        {item.description && (
+                          <p className={cn(
+                            'text-sm mb-4 line-clamp-2',
+                            theme.text.secondary
+                          )}>
+                            {item.description}
+                          </p>
+                        )}
+
+                        {/* Availability Status */}
+                        {!item.available && (
+                          <div className="mb-3">
+                            <span className="text-xs bg-gray-100 text-gray-600 dark:bg-gray-900/30 dark:text-gray-400 px-2 py-1 rounded-full">
+                              غير متوفر حالياً
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Price and Actions */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex flex-col">
+                            <span className={cn(
+                              'font-bold',
+                              responsive.fontSize.lg,
+                              'text-orange-600 dark:text-orange-400'
+                            )}>
+                              {displayPrice} ر.س
+                            </span>
+                            {hasDiscount && (
+                              <span className="text-sm text-gray-500 line-through">
+                                {item.productPrice} ر.س
+                              </span>
+                            )}
+                          </div>
+
+                          <Button
+                            variant="accent"
+                            size="sm"
+                            onClick={() => addToCart(item)}
+                            disabled={!item.available}
+                            className="group/btn"
+                          >
+                            <ShoppingCart className="w-4 h-4 mr-2 group-hover/btn:scale-110 transition-transform" />
+                            {item.available ? 'أضف للسلة' : 'غير متوفر'}
+                          </Button>
+                        </div>
+
                       </div>
-                    </div>
-                  </Card>
-                </motion.div>
-              ))}
+                    </Card>
+                  </motion.div>
+                );
+              })}
             </motion.div>
 
             {/* Summary */}
@@ -310,17 +303,11 @@ export default function FavoritesPage() {
             >
               <Card className="inline-block px-8 py-4">
                 <p className={cn('text-sm', theme.text.secondary)}>
-                  You have{' '}
+                  لديك{' '}
                   <span className={cn('font-bold', theme.text.primary)}>
-                    {filteredFavorites.length}
+                    {favorites.length}
                   </span>
-                  {selectedCategory !== 'All' && (
-                    <>
-                      {' '}
-                      <span className="text-orange-500">{selectedCategory}</span>
-                    </>
-                  )}
-                  {' '}favorite item{filteredFavorites.length !== 1 ? 's' : ''}
+                  {' '}منتج في المفضلة
                 </p>
               </Card>
             </motion.div>

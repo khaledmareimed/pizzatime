@@ -8,6 +8,7 @@ import { theme, responsive, animations } from '../../funcs/responsive';
 import { formatPrice } from '../../funcs/utils';
 import { usePublicCategories, usePublicProducts } from '../../funcs/hooks/usePublicData';
 import { useCartContext } from '../../funcs/contexts/CartContext';
+import { useFavorites } from '../../funcs/contexts/FavoritesContext';
 import { Product } from '../../funcs/collections/product';
 import { Category } from '../../funcs/collections/category';
 import Card from '../Card';
@@ -21,8 +22,8 @@ interface ProductsProps {
 
 export default function Products({ onAddToCart, onViewDetails, limit }: ProductsProps) {
   const { addItem } = useCartContext();
+  const { isFavorite, toggleFavorite } = useFavorites();
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
-  const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
   // Fetch categories and products from database
   const { data: categories, loading: categoriesLoading, error: categoriesError } = usePublicCategories();
@@ -52,15 +53,6 @@ export default function Products({ onAddToCart, onViewDetails, limit }: Products
     return filtered;
   }, [products, selectedCategoryId, limit]);
 
-  const toggleFavorite = (itemId: string) => {
-    const newFavorites = new Set(favorites);
-    if (newFavorites.has(itemId)) {
-      newFavorites.delete(itemId);
-    } else {
-      newFavorites.add(itemId);
-    }
-    setFavorites(newFavorites);
-  };
 
   // Handle add to cart - use provided handler or default behavior
   const handleAddToCart = (item: Product) => {
@@ -205,20 +197,20 @@ export default function Products({ onAddToCart, onViewDetails, limit }: Products
                       {/* Favorite Button */}
                       <motion.button
                         whileTap={{ scale: 0.9 }}
-                        onClick={(e: React.MouseEvent) => {
+                        onClick={async (e: React.MouseEvent) => {
                           e.stopPropagation(); // Prevent card click
-                          toggleFavorite(item._id.toString());
+                          await toggleFavorite(item._id);
                         }}
                         className={cn(
                           'absolute top-4 right-4 z-10 p-2 rounded-full transition-colors',
-                          favorites.has(item._id.toString())
+                          isFavorite(item._id)
                             ? 'bg-red-500 text-white'
                             : 'bg-white/80 dark:bg-gray-800/80 text-gray-600 dark:text-gray-400'
                         )}
                       >
                         <Heart className={cn(
                           'w-4 h-4',
-                          favorites.has(item._id.toString()) ? 'fill-current' : ''
+                          isFavorite(item._id) ? 'fill-current' : ''
                         )} />
                       </motion.button>
 
@@ -251,7 +243,9 @@ export default function Products({ onAddToCart, onViewDetails, limit }: Products
                               <span title="خيارات إضافية">🍕</span>
                             )}
                             {!item.available && (
-                              <span title="غير متوفر">❌</span>
+                              <span className="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs rounded-full font-medium">
+                                غير متوفر
+                              </span>
                             )}
                           </div>
                         </div>
@@ -303,18 +297,28 @@ export default function Products({ onAddToCart, onViewDetails, limit }: Products
                               عرض
                             </Button>
                             
-                            <Button
-                              onClick={(e) => {
-                                e?.stopPropagation(); // Prevent card click
-                                handleAddToCart(item);
-                              }}
-                              variant="accent"
-                              size="sm"
-                              className="group"
-                              disabled={!item.available}
-                            >
-                              <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform" />
-                            </Button>
+                            {item.available ? (
+                              <Button
+                                onClick={(e) => {
+                                  e?.stopPropagation(); // Prevent card click
+                                  handleAddToCart(item);
+                                }}
+                                variant="accent"
+                                size="sm"
+                                className="group"
+                              >
+                                <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform" />
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled
+                                className="text-red-500 border-red-300 cursor-not-allowed"
+                              >
+                                غير متوفر
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </div>

@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import Button from '@/components/Button'
 import ImageUpload from './ImageUpload'
-import { ProductForm, Category } from './types'
+import { ProductForm, Category, ProductOption } from './types'
 
 interface ProductModalProps {
   show: boolean
@@ -69,6 +69,67 @@ export default function ProductModal({
     setProductForm({
       ...productForm,
       addonsAndToppings: newToppings
+    })
+  }
+
+  // Product Options handlers
+  const addOption = () => {
+    setProductForm({
+      ...productForm,
+      productOptions: [...productForm.productOptions, { 
+        optionTitle: '', 
+        isRequired: true, 
+        choices: [{ choiceName: '', choicePrice: 0 }] 
+      }]
+    })
+  }
+
+  const removeOption = (index: number) => {
+    const newOptions = productForm.productOptions.filter((_: any, i: number) => i !== index)
+    setProductForm({
+      ...productForm,
+      productOptions: newOptions
+    })
+  }
+
+  const updateOption = (index: number, field: string, value: string | boolean) => {
+    const newOptions = [...productForm.productOptions]
+    newOptions[index] = { ...newOptions[index], [field]: value }
+    setProductForm({
+      ...productForm,
+      productOptions: newOptions
+    })
+  }
+
+  const addChoice = (optionIndex: number) => {
+    const newOptions = [...productForm.productOptions]
+    newOptions[optionIndex].choices.push({ choiceName: '', choicePrice: 0 })
+    setProductForm({
+      ...productForm,
+      productOptions: newOptions
+    })
+  }
+
+  const removeChoice = (optionIndex: number, choiceIndex: number) => {
+    const newOptions = [...productForm.productOptions]
+    if (newOptions[optionIndex].choices.length > 1) {
+      newOptions[optionIndex].choices = newOptions[optionIndex].choices.filter((_: any, i: number) => i !== choiceIndex)
+      setProductForm({
+        ...productForm,
+        productOptions: newOptions
+      })
+    }
+  }
+
+  const updateChoice = (optionIndex: number, choiceIndex: number, field: string, value: string | number) => {
+    const newOptions = [...productForm.productOptions]
+    newOptions[optionIndex].choices[choiceIndex] = { 
+      ...newOptions[optionIndex].choices[choiceIndex], 
+      [field]: value 
+    }
+    setProductForm({
+      ...productForm,
+      productOptions: newOptions
     })
   }
 
@@ -265,12 +326,128 @@ export default function ProductModal({
             />
           </div>
 
+          {/* Product Options Section */}
+          <div className="space-y-6">
+            <h4 className="flex items-center text-lg font-medium text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">
+              <Tag className="w-5 h-5 mr-2" />
+              خيارات المنتج (مطلوبة)
+            </h4>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              خيارات إجبارية يجب على العميل اختيار واحد منها (مثل نوع اللحم: دجاج، لحم، خروف)
+            </p>
+            
+            <div className="space-y-6">
+              {productForm.productOptions.map((option: ProductOption, optionIndex: number) => (
+                <div key={optionIndex} className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700">
+                  <div className="flex gap-3 mb-4">
+                    <input
+                      type="text"
+                      value={option.optionTitle}
+                      onChange={(e) => updateOption(optionIndex, 'optionTitle', e.target.value)}
+                      className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      placeholder="عنوان الخيار (مثل: نوع اللحم)"
+                      disabled={loading}
+                    />
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={option.isRequired}
+                        onChange={(e) => updateOption(optionIndex, 'isRequired', e.target.checked)}
+                        className="sr-only"
+                        disabled={loading}
+                      />
+                      <div className="flex items-center">
+                        {option.isRequired ? (
+                          <ToggleRight className="w-8 h-8 text-red-500" />
+                        ) : (
+                          <ToggleLeft className="w-8 h-8 text-gray-400" />
+                        )}
+                        <span className="mr-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                          مطلوب
+                        </span>
+                      </div>
+                    </label>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeOption(optionIndex)}
+                      className="text-red-600 hover:text-red-700 px-3"
+                      disabled={loading}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">الخيارات المتاحة:</h5>
+                    {option.choices.map((choice: any, choiceIndex: number) => (
+                      <div key={choiceIndex} className="flex gap-3">
+                        <input
+                          type="text"
+                          value={choice.choiceName}
+                          onChange={(e) => updateChoice(optionIndex, choiceIndex, 'choiceName', e.target.value)}
+                          className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                          placeholder="اسم الخيار (مثل: دجاج)"
+                          disabled={loading}
+                        />
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={choice.choicePrice}
+                          onChange={(e) => updateChoice(optionIndex, choiceIndex, 'choicePrice', parseFloat(e.target.value) || 0)}
+                          className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                          placeholder="السعر الإضافي"
+                          min="0"
+                          disabled={loading}
+                        />
+                        {option.choices.length > 1 && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removeChoice(optionIndex, choiceIndex)}
+                            className="text-red-600 hover:text-red-700 px-2"
+                            disabled={loading}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => addChoice(optionIndex)}
+                      className="text-green-600 hover:text-green-700"
+                      disabled={loading}
+                    >
+                      <Plus className="w-3 h-3 mr-2" />
+                      إضافة خيار
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={addOption}
+                className="text-blue-600 hover:text-blue-700"
+                disabled={loading}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                إضافة مجموعة خيارات جديدة
+              </Button>
+            </div>
+          </div>
+
           {/* Toppings Section */}
           <div className="space-y-6">
             <h4 className="flex items-center text-lg font-medium text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">
               <Plus className="w-5 h-5 mr-2" />
-              الإضافات والتوابل
+              الإضافات والتوابل (اختيارية)
             </h4>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              إضافات اختيارية يمكن للعميل إضافتها للمنتج (مثل الجبن الإضافي، الفطر، إلخ)
+            </p>
             
             <div className="space-y-3">
               {productForm.addonsAndToppings.map((topping: any, index: number) => (

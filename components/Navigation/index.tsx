@@ -2,9 +2,10 @@
 
 import { useRouter, usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Home, ShoppingCart, Heart, Menu } from 'lucide-react';
+import { Home, ShoppingCart, Heart, Menu, User } from 'lucide-react';
 import { cn } from '../../funcs/utils';
 import { theme, animations } from '../../funcs/responsive';
+import { useFavorites } from '../../funcs/contexts/FavoritesContext';
 
 interface NavigationItem {
   id: string;
@@ -39,6 +40,12 @@ const navigationItems: NavigationItem[] = [
     label: 'المفضلة',
     icon: Heart,
     href: '/user/favorites'
+  },
+  {
+    id: 'profile',
+    label: 'الملف الشخصي',
+    icon: User,
+    href: '/user/profile'
   }
 ];
 
@@ -55,13 +62,19 @@ export default function Navigation({
   cartCount = 0,
   onSearchClick
 }: NavigationProps) {
+  const { favoritesCount } = useFavorites();
   const router = useRouter();
   const pathname = usePathname();
 
-  // Update cart badge
-  const items = navigationItems.map(item => 
-    item.id === 'cart' ? { ...item, badge: cartCount } : item
-  );
+  // Update cart and favorites badges
+  const items = navigationItems.map(item => {
+    if (item.id === 'cart') {
+      return { ...item, badge: cartCount };
+    } else if (item.id === 'favorites') {
+      return { ...item, badge: favoritesCount };
+    }
+    return item;
+  });
 
   const handleItemClick = (item: NavigationItem) => {
     if (item.id === 'search') {
@@ -80,6 +93,7 @@ export default function Navigation({
     if (pathname === '/user/menu') return 'menu';
     if (pathname === '/user/favorites') return 'favorites';
     if (pathname === '/user/checkout') return 'cart';
+    if (pathname === '/user/profile') return 'profile';
     return activeItem;
   };
 

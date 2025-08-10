@@ -54,8 +54,9 @@ export default function ProductsManagement() {
     description: '',
     available: true,
     visible: true,
-    imagesUrl: [''],
-    addonsAndToppings: [{ toppingName: '', toppingPrice: 0 }]
+    imagesUrl: [],
+    addonsAndToppings: [{ toppingName: '', toppingPrice: 0 }],
+    productOptions: []
   })
 
   // Load data
@@ -280,7 +281,8 @@ export default function ProductsManagement() {
       available: true,
       visible: true,
       imagesUrl: [],
-      addonsAndToppings: [{ toppingName: '', toppingPrice: 0 }]
+      addonsAndToppings: [{ toppingName: '', toppingPrice: 0 }],
+      productOptions: []
     })
   }
 
@@ -315,7 +317,8 @@ export default function ProductsManagement() {
         imagesUrl: product.imagesUrl || [],
         addonsAndToppings: product.addonsAndToppings.length > 0 
           ? product.addonsAndToppings 
-          : [{ toppingName: '', toppingPrice: 0 }]
+          : [{ toppingName: '', toppingPrice: 0 }],
+        productOptions: product.productOptions || []
       })
     } else {
       setEditingProduct(null)

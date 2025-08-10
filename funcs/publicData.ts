@@ -59,10 +59,9 @@ export async function getPublicProducts(categoryId?: string): Promise<Product[]>
       throw new Error('Products collection not available')
     }
 
-    // Build secure query - only visible and available products
+    // Build secure query - only visible products (show both available and unavailable)
     const query: any = {
-      visible: true,
-      available: true
+      visible: true
     }
 
     // Add category filter if provided
@@ -116,8 +115,7 @@ export async function getPublicProduct(productId: string): Promise<Product | nul
     const product = await productCollection.model
       .findOne({
         _id: productId,
-        visible: true,
-        available: true
+        visible: true
       })
       .lean()
 
@@ -211,8 +209,7 @@ async function hasVisibleProductsInCategory(categoryId: string): Promise<boolean
 
     const count = await productCollection.model.countDocuments({
       categoryId,
-      visible: true,
-      available: true
+      visible: true
     })
 
     return count > 0
@@ -244,7 +241,6 @@ export async function searchPublicProducts(searchTerm: string): Promise<Product[
     const products = await productCollection.model
       .find({
         visible: true,
-        available: true,
         $or: [
           { productName: { $regex: sanitizedTerm, $options: 'i' } },
           { description: { $regex: sanitizedTerm, $options: 'i' } }

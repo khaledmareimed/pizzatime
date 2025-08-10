@@ -50,6 +50,33 @@ export const ProductSchema = {
       min: [0, 'Topping price cannot be negative']
     }
   }],
+  productOptions: [{
+    optionTitle: {
+      type: String,
+      required: true,
+      trim: true,
+      minlength: [1, 'Option title is required'],
+      maxlength: [100, 'Option title cannot exceed 100 characters']
+    },
+    isRequired: {
+      type: Boolean,
+      default: true
+    },
+    choices: [{
+      choiceName: {
+        type: String,
+        required: true,
+        trim: true,
+        minlength: [1, 'Choice name is required'],
+        maxlength: [50, 'Choice name cannot exceed 50 characters']
+      },
+      choicePrice: {
+        type: Number,
+        default: 0,
+        min: [0, 'Choice price cannot be negative']
+      }
+    }]
+  }],
   description: {
     type: String,
     trim: true,
@@ -77,6 +104,15 @@ export const ProductSchema = {
   }]
 }
 
+export interface ProductOption {
+  optionTitle: string
+  isRequired: boolean
+  choices: Array<{
+    choiceName: string
+    choicePrice: number
+  }>
+}
+
 export interface Product extends BaseDocument {
   productName: string
   categoryId: string
@@ -86,6 +122,7 @@ export interface Product extends BaseDocument {
     toppingName: string
     toppingPrice: number
   }>
+  productOptions: ProductOption[]
   description?: string
   available: boolean
   visible: boolean

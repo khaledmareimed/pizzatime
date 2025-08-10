@@ -7,6 +7,7 @@ import Navigation from '../../components/Navigation';
 import { CartProvider, useCartContext } from '../../funcs/contexts/CartContext';
 import { ToastProvider, useToastContext } from '../../funcs/contexts/ToastContext';
 import { ToastContainer } from '../../components/Toast';
+import { SessionProvider } from '../../components/Auth/SessionProvider';
 
 function AppLayoutContent({
   children,
@@ -75,12 +76,14 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   return (
-    <CartProvider>
-      <ToastProvider>
-        <AppLayoutContent>
-          {children}
-        </AppLayoutContent>
-      </ToastProvider>
-    </CartProvider>
+    <SessionProvider>
+      <CartProvider>
+        <ToastProvider>
+          <AppLayoutContent>
+            {children}
+          </AppLayoutContent>
+        </ToastProvider>
+      </CartProvider>
+    </SessionProvider>
   );
 }

@@ -11,6 +11,7 @@ import {
   CartState, 
   CartSummary, 
   CartAddon,
+  CartOption,
   calculateCartSummary,
   createCartItemFromProduct 
 } from '../types/cart'
@@ -25,10 +26,11 @@ interface UseCartReturn {
   isLoading: boolean
   
   // Cart actions
-  addItem: (product: Product, quantity?: number, addons?: CartAddon[], comments?: string) => void
+  addItem: (product: Product, quantity?: number, addons?: CartAddon[], options?: CartOption[], comments?: string) => void
   removeItem: (productId: string) => void
   updateQuantity: (productId: string, quantity: number) => void
   updateItemAddons: (productId: string, addons: CartAddon[]) => void
+  updateItemOptions: (productId: string, options: CartOption[]) => void
   updateItemComments: (productId: string, comments: string) => void
   clearCart: () => void
   
@@ -43,7 +45,7 @@ interface UseCartReturn {
 export function useCart(): UseCartReturn {
   const [cartState, setCartState] = useState<CartState>({
     items: [],
-    summary: { totalItems: 0, totalQuantity: 0, subtotal: 0, addonsTotal: 0, total: 0 },
+    summary: { totalItems: 0, totalQuantity: 0, subtotal: 0, addonsTotal: 0, optionsTotal: 0, total: 0 },
     lastUpdated: new Date().toISOString()
   })
   const [isLoading, setIsLoading] = useState(true)
@@ -112,6 +114,7 @@ export function useCart(): UseCartReturn {
     product: Product, 
     quantity: number = 1, 
     addons: CartAddon[] = [], 
+    options: CartOption[] = [],
     comments?: string
   ) => {
     if (!product.available) {
@@ -136,12 +139,13 @@ export function useCart(): UseCartReturn {
           ...existingItem,
           quantity: existingItem.quantity + quantity,
           addons: [...addons], // Replace addons with new ones
+          options: [...options], // Replace options with new ones
           comments: comments || existingItem.comments,
           addedAt: new Date().toISOString() // Update timestamp
         }
       } else {
         // Add new item
-        const newItem = createCartItemFromProduct(product, quantity, addons, comments)
+        const newItem = createCartItemFromProduct(product, quantity, addons, options, comments)
         newItems = [...currentState.items, newItem]
       }
 
@@ -220,6 +224,27 @@ export function useCart(): UseCartReturn {
     })
   }, [saveCartToStorage])
 
+  // Update item options
+  const updateItemOptions = useCallback((productId: string, options: CartOption[]) => {
+    setCartState(currentState => {
+      const newItems = currentState.items.map(item => 
+        item.productId === productId 
+          ? { ...item, options, addedAt: new Date().toISOString() }
+          : item
+      )
+
+      const summary = calculateCartSummary(newItems)
+      const newState = {
+        items: newItems,
+        summary,
+        lastUpdated: new Date().toISOString()
+      }
+
+      saveCartToStorage(newState)
+      return newState
+    })
+  }, [saveCartToStorage])
+
   // Update item comments
   const updateItemComments = useCallback((productId: string, comments: string) => {
     setCartState(currentState => {
@@ -245,7 +270,7 @@ export function useCart(): UseCartReturn {
   const clearCart = useCallback(() => {
     const newState: CartState = {
       items: [],
-      summary: { totalItems: 0, totalQuantity: 0, subtotal: 0, addonsTotal: 0, total: 0 },
+      summary: { totalItems: 0, totalQuantity: 0, subtotal: 0, addonsTotal: 0, optionsTotal: 0, total: 0 },
       lastUpdated: new Date().toISOString()
     }
     
@@ -290,6 +315,7 @@ export function useCart(): UseCartReturn {
     removeItem,
     updateQuantity,
     updateItemAddons,
+    updateItemOptions,
     updateItemComments,
     clearCart,
     

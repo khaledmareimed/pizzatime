@@ -9,7 +9,7 @@
 
 import React, { createContext, useContext } from 'react'
 import { useCart } from '../hooks/useCart'
-import { CartItem, CartSummary, CartAddon } from '../types/cart'
+import { CartItem, CartSummary, CartAddon, CartOption } from '../types/cart'
 import { Product } from '../collections/product'
 
 interface CartContextType {
@@ -19,10 +19,11 @@ interface CartContextType {
   isLoading: boolean
   
   // Cart actions
-  addItem: (product: Product, quantity?: number, addons?: CartAddon[], comments?: string) => void
+  addItem: (product: Product, quantity?: number, addons?: CartAddon[], options?: CartOption[], comments?: string) => void
   removeItem: (productId: string) => void
   updateQuantity: (productId: string, quantity: number) => void
   updateItemAddons: (productId: string, addons: CartAddon[]) => void
+  updateItemOptions: (productId: string, options: CartOption[]) => void
   updateItemComments: (productId: string, comments: string) => void
   clearCart: () => void
   

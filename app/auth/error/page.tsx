@@ -3,7 +3,12 @@
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
+import { motion } from 'framer-motion'
+import { AlertTriangle, Loader, Home, RotateCcw } from 'lucide-react'
+import { cn } from '@/funcs/utils'
+import { theme, responsive, animations } from '@/funcs/responsive'
 import Button from '@/components/Button'
+import Card from '@/components/Card'
 
 function AuthErrorContent() {
   const searchParams = useSearchParams()
@@ -13,35 +18,35 @@ function AuthErrorContent() {
     switch (error) {
       case 'Configuration':
         return {
-          title: 'Server Configuration Error',
-          description: 'There is a problem with the server configuration. Please check your environment variables.',
+          title: 'خطأ في إعدادات الخادم',
+          description: 'هناك مشكلة في إعدادات الخادم. يرجى التحقق من متغيرات البيئة.',
           suggestions: [
-            'Verify GOOGLE_CLIENT_ID is set',
-            'Verify GOOGLE_CLIENT_SECRET is set', 
-            'Verify AUTH_SECRET is set',
-            'Check Google OAuth callback URL is correct'
+            'تحقق من إعداد GOOGLE_CLIENT_ID',
+            'تحقق من إعداد GOOGLE_CLIENT_SECRET', 
+            'تحقق من إعداد AUTH_SECRET',
+            'تحقق من صحة رابط Google OAuth'
           ]
         }
       case 'AccessDenied':
         return {
-          title: 'Access Denied',
-          description: 'You do not have permission to sign in.',
-          suggestions: ['Try signing in with a different account']
+          title: 'تم رفض الوصول',
+          description: 'ليس لديك صلاحية لتسجيل الدخول.',
+          suggestions: ['جرب تسجيل الدخول بحساب آخر']
         }
       case 'Verification':
         return {
-          title: 'Unable to sign in',
-          description: 'The sign in link was invalid. It may have been used already or it may have expired.',
-          suggestions: ['Try signing in again']
+          title: 'تعذر تسجيل الدخول',
+          description: 'رابط تسجيل الدخول غير صالح. ربما تم استخدامه من قبل أو انتهت صلاحيته.',
+          suggestions: ['جرب تسجيل الدخول مرة أخرى']
         }
       default:
         return {
-          title: 'Authentication Error',
-          description: 'Sorry, there was a problem signing you in.',
+          title: 'خطأ في المصادقة',
+          description: 'عذراً، حدثت مشكلة أثناء تسجيل الدخول.',
           suggestions: [
-            'Try signing in again',
-            'Check your internet connection',
-            'Contact support if the problem persists'
+            'جرب تسجيل الدخول مرة أخرى',
+            'تحقق من اتصال الإنترنت',
+            'تواصل مع الدعم إذا استمرت المشكلة'
           ]
         }
     }
@@ -50,55 +55,112 @@ function AuthErrorContent() {
   const errorInfo = getErrorMessage(error)
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full space-y-8 p-8">
-        <div className="text-center">
-          <div className="mx-auto h-12 w-12 text-red-500 mb-4">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.96-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-            </svg>
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+    <div className={cn(
+      'min-h-screen flex items-center justify-center p-4',
+      theme.background.primary
+    )}>
+      <motion.div 
+        {...animations.fadeIn}
+        className={cn('w-full', responsive.container.sm)}
+      >
+        <Card className="text-center space-y-6">
+          {/* Error Icon */}
+          <motion.div 
+            {...animations.scaleIn}
+            className={cn(
+              'inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4',
+              'bg-red-100 dark:bg-red-900/30'
+            )}
+          >
+            <AlertTriangle className="w-8 h-8 text-red-500" />
+          </motion.div>
+
+          {/* Error Title */}
+          <h1 className={cn(
+            'font-bold mb-3',
+            responsive.fontSize['2xl'],
+            theme.text.primary
+          )}>
             {errorInfo.title}
-          </h2>
-          <p className="text-gray-600 mb-6">
+          </h1>
+
+          {/* Error Description */}
+          <p className={cn(
+            'mb-6',
+            responsive.fontSize.base,
+            theme.text.secondary
+          )}>
             {errorInfo.description}
           </p>
           
+          {/* Error Code */}
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-              <p className="text-sm text-red-800">
-                <strong>Error Code:</strong> {error}
+            <div className={cn(
+              'p-4 rounded-xl border',
+              'bg-red-50 dark:bg-red-900/20',
+              'border-red-200 dark:border-red-800'
+            )}>
+              <p className={cn(
+                'text-sm',
+                'text-red-800 dark:text-red-200'
+              )}>
+                <strong>رمز الخطأ:</strong> {error}
               </p>
             </div>
           )}
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left">
-            <h3 className="font-semibold text-blue-900 mb-2">Troubleshooting:</h3>
-            <ul className="text-sm text-blue-800 space-y-1">
+          {/* Troubleshooting */}
+          <div className={cn(
+            'p-4 rounded-xl border text-right',
+            'bg-blue-50 dark:bg-blue-900/20',
+            'border-blue-200 dark:border-blue-800'
+          )}>
+            <h3 className={cn(
+              'font-semibold mb-3',
+              'text-blue-900 dark:text-blue-100'
+            )}>
+              خطوات الحل:
+            </h3>
+            <ul className={cn(
+              'text-sm space-y-2',
+              'text-blue-800 dark:text-blue-200'
+            )}>
               {errorInfo.suggestions.map((suggestion, index) => (
-                <li key={index} className="flex items-start">
-                  <span className="mr-2">•</span>
-                  {suggestion}
+                <li key={index} className="flex items-start gap-2">
+                  <span className="text-blue-500 mt-1">•</span>
+                  <span>{suggestion}</span>
                 </li>
               ))}
             </ul>
           </div>
 
-          <div className="space-y-4">
+          {/* Action Buttons */}
+          <div className="space-y-3 pt-4">
             <Link href="/auth/signin">
-              <Button className="w-full">
-                Try Again
+              <Button 
+                variant="accent" 
+                size="lg" 
+                fullWidth
+                className="gap-2"
+              >
+                <RotateCcw className="w-4 h-4" />
+                المحاولة مرة أخرى
               </Button>
             </Link>
             <Link href="/">
-              <Button variant="outline" className="w-full">
-                Go Home
+              <Button 
+                variant="outline" 
+                size="lg" 
+                fullWidth
+                className="gap-2"
+              >
+                <Home className="w-4 h-4" />
+                العودة للرئيسية
               </Button>
             </Link>
           </div>
-        </div>
-      </div>
+        </Card>
+      </motion.div>
     </div>
   )
 }
@@ -106,11 +168,16 @@ function AuthErrorContent() {
 export default function AuthErrorPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-2 text-gray-600">جاري التحميل...</p>
-        </div>
+      <div className={cn(
+        'min-h-screen flex items-center justify-center p-4',
+        theme.background.primary
+      )}>
+        <Card className="text-center">
+          <div className="flex flex-col items-center gap-4">
+            <Loader className="w-8 h-8 animate-spin text-orange-500" />
+            <p className={cn('text-sm', theme.text.secondary)}>جاري التحميل...</p>
+          </div>
+        </Card>
       </div>
     }>
       <AuthErrorContent />
