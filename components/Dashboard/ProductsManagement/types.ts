@@ -40,7 +40,6 @@ export interface CategoryForm {
   name: string
   description: string
   displayOrder: number
-  imageUrl: string
   color: string
 }
 

@@ -1,9 +1,8 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { X, Save, Palette, Hash, Image, FileText } from 'lucide-react'
+import { X, Save, Palette, Hash, FileText } from 'lucide-react'
 import Button from '@/components/Button'
-import ImageUpload from './ImageUpload'
 import { CategoryForm } from './types'
 
 interface CategoryModalProps {
@@ -105,39 +104,34 @@ export default function CategoryModal({
             </div>
 
             <div>
-              <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                 <Palette className="w-4 h-4 mr-2" />
                 اللون
               </label>
-              <div className="flex gap-2">
-                <input
-                  type="color"
-                  value={categoryForm.color}
-                  onChange={(e) => setCategoryForm({ ...categoryForm, color: e.target.value })}
-                  className="w-12 h-12 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer disabled:cursor-not-allowed"
-                  disabled={loading}
-                />
-                <input
-                  type="text"
-                  value={categoryForm.color}
-                  onChange={(e) => setCategoryForm({ ...categoryForm, color: e.target.value })}
-                  className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  placeholder="#3B82F6"
-                  disabled={loading}
-                />
+              
+              {/* Color Picker */}
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <input
+                    type="color"
+                    value={categoryForm.color}
+                    onChange={(e) => setCategoryForm({ ...categoryForm, color: e.target.value })}
+                    className="w-16 h-16 border-2 border-gray-300 dark:border-gray-600 rounded-xl cursor-pointer disabled:cursor-not-allowed transition-all hover:scale-105"
+                    disabled={loading}
+                  />
+                </div>
+                <div className="flex-1">
+                  <div 
+                    className="w-full h-16 rounded-xl border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center"
+                    style={{ backgroundColor: categoryForm.color }}
+                  >
+                    <span className="text-white font-medium text-sm drop-shadow-lg">
+                      معاينة اللون
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-
-          {/* Category Image */}
-          <div>
-            <ImageUpload
-              images={categoryForm.imageUrl ? [categoryForm.imageUrl] : []}
-              onImagesChange={(images) => setCategoryForm({ ...categoryForm, imageUrl: images[0] || '' })}
-              multiple={false}
-              maxImages={1}
-              label="صورة الفئة"
-            />
           </div>
         </div>
 

@@ -12,7 +12,8 @@ import {
   CreditCard,
   LogOut,
   Home,
-  Activity
+  Activity,
+  Calculator
 } from 'lucide-react'
 import Link from 'next/link'
 import Button from '@/components/Button'
@@ -29,6 +30,13 @@ export default function AdminDashboard({ session }: AdminDashboardProps) {
   }
 
   const menuItems = [
+    {
+      icon: Calculator,
+      title: 'POS System',
+      description: 'Point of Sale - Create orders for walk-in customers',
+      href: '/dash/pos',
+      color: 'bg-indigo-500'
+    },
     {
       icon: ShoppingBag,
       title: 'إدارة الطلبات',
@@ -47,7 +55,7 @@ export default function AdminDashboard({ session }: AdminDashboardProps) {
       icon: Settings,
       title: 'إدارة المنتجات',
       description: 'إضافة وتعديل المنتجات والقوائم',
-      href: '/admin/products',
+      href: '/dash/products',
       color: 'bg-orange-500'
     },
     {

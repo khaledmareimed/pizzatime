@@ -36,8 +36,9 @@ export default function CategoryFilter({
         </div>
         <Button
           onClick={onAddCategory}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
+          variant="primary"
           size="sm"
+          className="whitespace-nowrap"
         >
           <Plus className="w-4 h-4 mr-2" />
           <span className="hidden sm:inline">إضافة فئة</span>
@@ -102,39 +103,12 @@ export default function CategoryFilter({
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3 flex-1">
-                {/* Category Image/Color */}
+                {/* Category Color */}
                 <div 
-                  className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden"
+                  className="w-12 h-12 rounded-xl flex items-center justify-center"
                   style={{ backgroundColor: category.color || '#3B82F6' }}
                 >
-                  {category.imageUrl && category.imageUrl.trim() !== '' ? (
-                    <>
-                      <img
-                        src={category.imageUrl}
-                        alt={category.name}
-                        className="w-full h-full object-cover"
-                        onLoad={(e) => {
-                          console.log('✅ Category filter image loaded:', category.imageUrl)
-                        }}
-                        onError={(e) => {
-                          console.error('❌ Failed to load category filter image:', category.imageUrl)
-                          const target = e.currentTarget
-                          target.style.display = 'none'
-                          const container = target.parentElement
-                          if (container) {
-                            const icon = container.querySelector('.fallback-icon') as HTMLElement
-                            if (icon) {
-                              icon.style.display = 'block'
-                            }
-                          }
-                        }}
-                        crossOrigin="anonymous"
-                      />
-                      <Tag className="fallback-icon w-6 h-6 text-white" style={{ display: 'none' }} />
-                    </>
-                  ) : (
-                    <Tag className="w-6 h-6 text-white" />
-                  )}
+                  <Tag className="w-6 h-6 text-white" />
                 </div>
 
                 {/* Category Info */}
@@ -200,7 +174,7 @@ export default function CategoryFilter({
           <p className="text-gray-500 dark:text-gray-400 mb-4">
             ابدأ بإنشاء فئة جديدة لتنظيم منتجاتك
           </p>
-          <Button onClick={onAddCategory} className="bg-blue-600 hover:bg-blue-700 text-white">
+          <Button onClick={onAddCategory} variant="primary">
             <Plus className="w-4 h-4 mr-2" />
             إنشاء فئة جديدة
           </Button>

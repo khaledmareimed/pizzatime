@@ -5,8 +5,7 @@ import { useRouter } from 'next/navigation';
 import Header from '../../components/Header';
 import Navigation from '../../components/Navigation';
 import { CartProvider, useCartContext } from '../../funcs/contexts/CartContext';
-import { ToastProvider, useToastContext } from '../../funcs/contexts/ToastContext';
-import { ToastContainer } from '../../components/Toast';
+import { useToastContext } from '../../funcs/contexts/ToastContext';
 import { SessionProvider } from '../../components/Auth/SessionProvider';
 
 function AppLayoutContent({
@@ -16,7 +15,6 @@ function AppLayoutContent({
 }) {
   const router = useRouter();
   const { getTotalItems } = useCartContext();
-  const { toasts, removeToast } = useToastContext();
   const [favoritesCount, setFavoritesCount] = useState(5);
   const [activeNavItem, setActiveNavItem] = useState('home');
 
@@ -63,9 +61,6 @@ function AppLayoutContent({
         cartCount={getTotalItems()}
         onSearchClick={handleSearchFocus}
       />
-
-      {/* Toast Notifications */}
-      <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
   );
 }
@@ -78,11 +73,9 @@ export default function AppLayout({
   return (
     <SessionProvider>
       <CartProvider>
-        <ToastProvider>
-          <AppLayoutContent>
-            {children}
-          </AppLayoutContent>
-        </ToastProvider>
+        <AppLayoutContent>
+          {children}
+        </AppLayoutContent>
       </CartProvider>
     </SessionProvider>
   );

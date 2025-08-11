@@ -42,7 +42,6 @@ export default function ProductsManagement() {
     name: '',
     description: '',
     displayOrder: 0,
-    imageUrl: '',
     color: '#3B82F6'
   })
 
@@ -266,7 +265,6 @@ export default function ProductsManagement() {
       name: '',
       description: '',
       displayOrder: 0,
-      imageUrl: '',
       color: '#3B82F6'
     })
   }
@@ -293,7 +291,6 @@ export default function ProductsManagement() {
         name: category.name,
         description: category.description || '',
         displayOrder: category.displayOrder,
-        imageUrl: category.imageUrl || '',
         color: category.color || '#3B82F6'
       })
     } else {

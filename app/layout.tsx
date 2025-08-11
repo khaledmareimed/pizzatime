@@ -4,6 +4,8 @@ import "./globals.css";
 import { SessionProvider } from "@/components/Auth/SessionProvider";
 import { FavoritesProvider } from "@/funcs/contexts/FavoritesContext";
 import { CartProvider } from "@/funcs/contexts/CartContext";
+import { ToastProvider } from "@/funcs/contexts/ToastContext";
+import ToastWrapper from "@/components/ToastWrapper";
 import UserInitializer from "@/components/UserInitializer";
 
 const geistSans = Geist({
@@ -35,8 +37,11 @@ export default function RootLayout({
         <SessionProvider>
           <FavoritesProvider>
             <CartProvider>
-              <UserInitializer />
-              {children}
+              <ToastProvider>
+                <UserInitializer />
+                {children}
+                <ToastWrapper />
+              </ToastProvider>
             </CartProvider>
           </FavoritesProvider>
         </SessionProvider>
