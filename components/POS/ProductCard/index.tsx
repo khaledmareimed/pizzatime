@@ -10,7 +10,9 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product, onClick }: ProductCardProps) {
-  const displayPrice = product.productPrice // Remove discount logic
+  const displayPrice = (product.productDiscountPrice && product.productDiscountPrice > 0) 
+    ? product.productDiscountPrice 
+    : (product.productPrice || 0) // Fix price handling with proper null/undefined checks
   const primaryImage = product.imagesUrl && product.imagesUrl.length > 0 
     ? product.imagesUrl[0] 
     : 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=400&fit=crop'

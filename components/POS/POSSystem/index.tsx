@@ -194,8 +194,10 @@ export default function POSSystem({ session }: POSSystemProps) {
       updatedItems[existingItemIndex].quantity += quantity
       setCartItems(updatedItems)
     } else {
-      // Add new item
-      const displayPrice = product.productDiscountPrice || product.productPrice
+      // Add new item - Fix price handling with proper null/undefined checks
+      const displayPrice = (product.productDiscountPrice && product.productDiscountPrice > 0) 
+        ? product.productDiscountPrice 
+        : (product.productPrice || 0)
       const primaryImage = product.imagesUrl && product.imagesUrl.length > 0 
         ? product.imagesUrl[0] 
         : 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=400&fit=crop'
@@ -206,18 +208,18 @@ export default function POSSystem({ session }: POSSystemProps) {
         name: product.productName,
         description: product.description,
         price: displayPrice,
-        originalPrice: product.productPrice,
+        originalPrice: product.productPrice || 0,
         quantity,
         image: primaryImage,
         addons: addons.map(addon => ({
           id: addon.id || addon.toppingName,
           name: addon.toppingName || addon.name,
-          price: addon.toppingPrice || addon.price
+          price: addon.toppingPrice || addon.price || 0
         })),
         options: options.map(option => ({
           optionTitle: option.optionTitle,
           choiceName: option.choiceName,
-          choicePrice: option.choicePrice
+          choicePrice: option.choicePrice || 0
         })),
         comments,
         addedAt: new Date().toISOString(),

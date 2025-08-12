@@ -84,7 +84,9 @@ export function createCartItemFromProduct(
   options: CartOption[] = [],
   comments?: string
 ): CartItem {
-  const displayPrice = product.productDiscountPrice || product.productPrice
+  const displayPrice = (product.productDiscountPrice && product.productDiscountPrice > 0) 
+    ? product.productDiscountPrice 
+    : (product.productPrice || 0) // Fix price handling with proper null/undefined checks
   const primaryImage = product.imagesUrl && product.imagesUrl.length > 0 
     ? product.imagesUrl[0] 
     : 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=400&fit=crop'
@@ -95,7 +97,7 @@ export function createCartItemFromProduct(
     name: product.productName,
     description: product.description,
     price: displayPrice,
-    originalPrice: product.productPrice,
+    originalPrice: product.productPrice || 0,
     quantity,
     image: primaryImage,
     addons,
@@ -112,11 +114,11 @@ export function calculateCartSummary(items: CartItem[]): CartSummary {
   const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0)
   const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
   const addonsTotal = items.reduce((sum, item) => {
-    const itemAddonsTotal = item.addons.reduce((addonSum, addon) => addonSum + addon.price, 0)
+    const itemAddonsTotal = item.addons.reduce((addonSum, addon) => addonSum + (addon.price || 0), 0)
     return sum + (itemAddonsTotal * item.quantity)
   }, 0)
   const optionsTotal = items.reduce((sum, item) => {
-    const itemOptionsTotal = item.options.reduce((optionSum, option) => optionSum + option.choicePrice, 0)
+    const itemOptionsTotal = item.options.reduce((optionSum, option) => optionSum + (option.choicePrice || 0), 0)
     return sum + (itemOptionsTotal * item.quantity)
   }, 0)
   const total = subtotal + addonsTotal + optionsTotal

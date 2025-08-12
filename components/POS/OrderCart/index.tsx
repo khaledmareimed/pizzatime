@@ -81,7 +81,7 @@ export default function OrderCart({
                   <div className="mt-1">
                     {item.addons.map((addon, index) => (
                       <span key={index} className="inline-block mr-2">
-                        {addon.name} (+{addon.price.toFixed(2)} ر.س)
+                        {addon.name} (+{(addon.price || 0).toFixed(2)} ر.س)
                       </span>
                     ))}
                   </div>
@@ -134,8 +134,8 @@ export default function OrderCart({
                 <div className="text-left">
                   <span className="text-lg font-bold text-gray-900 dark:text-white">
                     {((item.price + 
-                      item.addons.reduce((sum, addon) => sum + addon.price, 0) +
-                      item.options.reduce((sum, option) => sum + option.choicePrice, 0)
+                      item.addons.reduce((sum, addon) => sum + (addon.price || 0), 0) +
+                      item.options.reduce((sum, option) => sum + (option.choicePrice || 0), 0)
                     ) * item.quantity).toFixed(2)} ر.س
                   </span>
                 </div>
