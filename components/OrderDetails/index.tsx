@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { ShoppingBag, Tag } from 'lucide-react';
 import { cn } from '../../funcs/utils';
 import { theme, responsive } from '../../funcs/responsive';
+import { useToastContext } from '../../funcs/contexts/ToastContext';
 import Card from '../Card';
 import FoodItem, { type OrderItem } from '../FoodItem';
 
@@ -14,9 +15,20 @@ interface OrderDetailsProps {
   items: OrderItem[];
   onUpdateQuantity: (itemId: string, newQuantity: number) => void;
   onRemoveItem: (itemId: string) => void;
+  onCouponChange?: (coupon: {
+    code: string;
+    name: string;
+    discountAmount: number;
+    couponId: string;
+  } | null, totals: {
+    subtotal: number;
+    couponDiscount: number;
+    deliveryFee: number;
+    total: number;
+  }) => void;
 }
 
-export default function OrderDetails({ items, onUpdateQuantity, onRemoveItem }: OrderDetailsProps) {
+export default function OrderDetails({ items, onUpdateQuantity, onRemoveItem, onCouponChange }: OrderDetailsProps) {
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<{ 
     code: string; 
@@ -24,10 +36,12 @@ export default function OrderDetails({ items, onUpdateQuantity, onRemoveItem }: 
     discountAmount: number;
     discountType: string;
     discountValue: number;
+    couponId: string;
   } | null>(null);
   const [couponError, setCouponError] = useState('');
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
   const [isRevalidatingCoupon, setIsRevalidatingCoupon] = useState(false);
+  const toast = useToastContext();
 
   const calculateItemTotal = (item: OrderItem) => {
     const basePrice = item.price;
@@ -38,7 +52,29 @@ export default function OrderDetails({ items, onUpdateQuantity, onRemoveItem }: 
 
   const subtotal = items.reduce((sum, item) => sum + calculateItemTotal(item), 0);
   const couponDiscount = appliedCoupon ? appliedCoupon.discountAmount : 0;
-  const total = subtotal - couponDiscount;
+  const deliveryFee = 15; // Fixed delivery fee
+  const total = subtotal - couponDiscount + deliveryFee;
+
+  // Notify parent component about coupon and totals changes
+  useEffect(() => {
+    if (onCouponChange) {
+      const couponData = appliedCoupon ? {
+        code: appliedCoupon.code,
+        name: appliedCoupon.name,
+        discountAmount: appliedCoupon.discountAmount,
+        couponId: appliedCoupon.couponId
+      } : null;
+
+      const totalsData = {
+        subtotal,
+        couponDiscount,
+        deliveryFee,
+        total
+      };
+
+      onCouponChange(couponData, totalsData);
+    }
+  }, [appliedCoupon, subtotal, couponDiscount, total, onCouponChange]);
 
   // Re-validate coupon when items change
   useEffect(() => {
@@ -83,18 +119,23 @@ export default function OrderDetails({ items, onUpdateQuantity, onRemoveItem }: 
           name: data.data.name,
           discountAmount: data.data.discountAmount,
           discountType: data.data.discountType,
-          discountValue: data.data.discountValue
+          discountValue: data.data.discountValue,
+          couponId: data.data.couponId || data.data._id
         });
         setCouponError('');
       } else {
         // Coupon is no longer valid, remove it
         setAppliedCoupon(null);
-        setCouponError(`تم إلغاء القسيمة: ${data.error}`);
+        const errorMessage = `تم إلغاء القسيمة: ${data.error}`;
+        setCouponError(errorMessage);
+        toast.warning('تم إلغاء القسيمة', data.error);
       }
     } catch (error) {
       console.error('Error revalidating coupon:', error);
       // Keep the coupon but show a warning
-      setCouponError('تعذر التحقق من صحة القسيمة');
+      const warningMessage = 'تعذر التحقق من صحة القسيمة';
+      setCouponError(warningMessage);
+      toast.warning('تحذير', warningMessage);
     } finally {
       setIsRevalidatingCoupon(false);
     }
@@ -147,23 +188,33 @@ export default function OrderDetails({ items, onUpdateQuantity, onRemoveItem }: 
           name: data.data.name,
           discountAmount: data.data.discountAmount,
           discountType: data.data.discountType,
-          discountValue: data.data.discountValue
+          discountValue: data.data.discountValue,
+          couponId: data.data.couponId || data.data._id
         });
         setCouponCode('');
         setCouponError('');
+        toast.success('تم تطبيق القسيمة!', `وفرت ${data.data.discountAmount.toFixed(2)} دينار أردني`);
       } else {
-        setCouponError(data.error || 'رمز قسيمة غير فعال أو خاطئ');
+        const errorMessage = data.error || 'رمز قسيمة غير فعال أو خاطئ';
+        setCouponError(errorMessage);
+        toast.error('خطأ في القسيمة', errorMessage);
       }
     } catch (error) {
       console.error('Error validating coupon:', error);
-      setCouponError('حدث خطأ في التحقق من القسيمة');
+      const errorMessage = 'حدث خطأ في التحقق من القسيمة';
+      setCouponError(errorMessage);
+      toast.error('خطأ في الشبكة', errorMessage);
     } finally {
       setIsValidatingCoupon(false);
     }
   };
 
   const removeCoupon = () => {
+    const removedCoupon = appliedCoupon;
     setAppliedCoupon(null);
+    if (removedCoupon) {
+      toast.info('تم إزالة القسيمة', `تم إزالة قسيمة ${removedCoupon.code}`);
+    }
   };
 
   return (
@@ -240,7 +291,7 @@ export default function OrderDetails({ items, onUpdateQuantity, onRemoveItem }: 
             </div>
           ) : (
             <div className={cn(
-              'flex items-center justify-between p-2 rounded-xl',
+              'flex items-center justify-between p-3 rounded-xl',
               'bg-green-50 border border-green-200 dark:bg-green-900/20 dark:border-green-800'
             )}>
               <div className="flex items-center gap-2">
@@ -260,9 +311,11 @@ export default function OrderDetails({ items, onUpdateQuantity, onRemoveItem }: 
               </div>
               <button
                 onClick={removeCoupon}
-                className="text-xs text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300"
+                className="text-red-500 hover:text-red-700 p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
               >
-                Remove
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
           )}
@@ -270,14 +323,18 @@ export default function OrderDetails({ items, onUpdateQuantity, onRemoveItem }: 
 
         {appliedCoupon && (
           <div className="flex justify-between text-sm">
-            <span className={theme.text.secondary}>Coupon Discount:</span>
-            <span className="text-green-600 dark:text-green-400">-دينار أردني{couponDiscount.toFixed(2)}</span>
+            <span className="text-green-600 dark:text-green-400">
+              خصم القسيمة ({appliedCoupon.code})
+            </span>
+            <span className="text-green-600 dark:text-green-400 font-medium">
+              -{couponDiscount.toFixed(2)} دينار أردني
+            </span>
           </div>
         )}
         
         <div className="flex justify-between text-sm">
           <span className={theme.text.secondary}>التوصيل:</span>
-          <span className="text-green-600 dark:text-green-400">FREE</span>
+          <span className={theme.text.primary}>{deliveryFee.toFixed(2)} دينار أردني</span>
         </div>
         
         <div className={cn(
@@ -288,9 +345,21 @@ export default function OrderDetails({ items, onUpdateQuantity, onRemoveItem }: 
         )}>
           <span>المجموع:</span>
           <span className="text-orange-600 dark:text-orange-400">
-         {total.toFixed(2)}     دينار أردني
+            {total.toFixed(2)} دينار أردني
           </span>
         </div>
+
+        {/* Savings Display */}
+        {couponDiscount > 0 && (
+          <div className="text-center mt-3">
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200">
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+              </svg>
+              وفرت {couponDiscount.toFixed(2)} دينار أردني
+            </span>
+          </div>
+        )}
         </div>
       </Card>
     </div>

@@ -13,26 +13,61 @@ export const OrderSchema = {
     required: true,
     ref: 'User'
   },
+  orderId: {
+    type: String,
+    required: true,
+    unique: true
+  },
   items: [{
     productId: { type: String, required: true, ref: 'Product' },
+    productName: { type: String, required: true },
     quantity: { type: Number, required: true, min: 1 },
-    unitPrice: { type: Number, required: true, min: 0.01 },
-    customizations: {
-      size: { type: String, enum: ['small', 'medium', 'large'] },
-      extras: [{ type: String }],
-      notes: { type: String, maxlength: 200 }
-    }
+    price: { type: Number, required: true, min: 0 },
+    originalPrice: { type: Number, required: true, min: 0 },
+    image: { type: String },
+    categoryId: { type: String, required: true },
+    addons: [{
+      id: { type: String, required: true },
+      name: { type: String, required: true },
+      price: { type: Number, required: true, min: 0 }
+    }],
+    options: [{
+      optionTitle: { type: String, required: true },
+      choiceName: { type: String, required: true },
+      choicePrice: { type: Number, required: true, min: 0 }
+    }],
+    comments: { type: String, maxlength: 500 }
   }],
   deliveryAddress: {
-    street: { type: String, required: true },
+    name: { type: String, required: true },
+    recipientName: { type: String, required: true },
     city: { type: String, required: true },
-    zipCode: { type: String, required: true },
-    instructions: { type: String, maxlength: 200 }
+    phone: { type: String, required: true },
+    addressDetails: { type: String, required: true }
   },
-  totalAmount: {
-    type: Number,
-    required: true,
-    min: [0.01, 'Total amount must be greater than 0']
+  orderSummary: {
+    subtotal: { type: Number, required: true, min: 0 },
+    addonsTotal: { type: Number, default: 0, min: 0 },
+    optionsTotal: { type: Number, default: 0, min: 0 },
+    deliveryFee: { type: Number, default: 0, min: 0 },
+    couponDiscount: { type: Number, default: 0, min: 0 },
+    total: { type: Number, required: true, min: 0.01 }
+  },
+  coupon: {
+    couponId: { type: String },
+    code: { type: String },
+    name: { type: String },
+    discountAmount: { type: Number, min: 0 }
+  },
+  paymentMethod: {
+    type: String,
+    enum: ['cash', 'card', 'online'],
+    default: 'cash'
+  },
+  deliveryMethod: {
+    type: String,
+    enum: ['pickup', 'delivery'],
+    default: 'delivery'
   },
   status: {
     type: String,
@@ -44,45 +79,88 @@ export const OrderSchema = {
     enum: ['pending', 'paid', 'failed', 'refunded'],
     default: 'pending'
   },
+  notes: {
+    type: String,
+    maxlength: 1000
+  },
   estimatedDeliveryTime: {
     type: Date
   },
   actualDeliveryTime: {
     type: Date
+  },
+  orderDate: {
+    type: Date,
+    default: Date.now
   }
+}
+
+export interface OrderItem {
+  productId: string
+  productName: string
+  quantity: number
+  price: number
+  originalPrice: number
+  image?: string
+  categoryId: string
+  addons: Array<{
+    id: string
+    name: string
+    price: number
+  }>
+  options: Array<{
+    optionTitle: string
+    choiceName: string
+    choicePrice: number
+  }>
+  comments?: string
 }
 
 export interface Order extends BaseDocument {
   userId: string
-  items: Array<{
-    productId: string
-    quantity: number
-    unitPrice: number
-    customizations?: {
-      size?: 'small' | 'medium' | 'large'
-      extras?: string[]
-      notes?: string
-    }
-  }>
+  orderId: string
+  items: OrderItem[]
   deliveryAddress: {
-    street: string
+    name: string
+    recipientName: string
     city: string
-    zipCode: string
-    instructions?: string
+    phone: string
+    addressDetails: string
   }
-  totalAmount: number
+  orderSummary: {
+    subtotal: number
+    addonsTotal: number
+    optionsTotal: number
+    deliveryFee: number
+    couponDiscount: number
+    total: number
+  }
+  coupon?: {
+    couponId: string
+    code: string
+    name: string
+    discountAmount: number
+  }
+  paymentMethod: 'cash' | 'card' | 'online'
+  deliveryMethod: 'pickup' | 'delivery'
   status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'out-for-delivery' | 'delivered' | 'cancelled'
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded'
+  notes?: string
   estimatedDeliveryTime?: Date
   actualDeliveryTime?: Date
+  orderDate: Date
 }
 
 // Default indexes for Order collection
 export const OrderIndexes = [
   { fields: { userId: 1 } },
+  { fields: { orderId: 1 }, options: { unique: true } },
   { fields: { status: 1 } },
   { fields: { createdAt: -1 } },
+  { fields: { orderDate: -1 } },
   { fields: { paymentStatus: 1 } },
-  { fields: { estimatedDeliveryTime: 1 } }
+  { fields: { estimatedDeliveryTime: 1 } },
+  { fields: { userId: 1, status: 1 } },
+  { fields: { userId: 1, orderDate: -1 } }
 ]
 

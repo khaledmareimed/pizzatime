@@ -65,7 +65,8 @@ export const theme = {
   background: {
     primary: 'bg-white dark:bg-gray-900',
     secondary: 'bg-gray-50 dark:bg-gray-800',
-    card: 'bg-white dark:bg-gray-800'
+    card: 'bg-white dark:bg-gray-800',
+    accent: 'bg-blue-100 dark:bg-blue-900'
   },
   
   border: {

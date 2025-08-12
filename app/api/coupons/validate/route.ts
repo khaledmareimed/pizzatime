@@ -91,6 +91,7 @@ export async function POST(request: NextRequest) {
     // Prepare validation data
     const validationData: OrderValidationData = {
       userId: session.user.id,
+      userEmail: session.user.email || '',
       orderTotal: parseFloat(orderData.orderTotal),
       categoryIds: orderData.categoryIds,
       productIds: orderData.productIds

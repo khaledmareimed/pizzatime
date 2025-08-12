@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
         orderId: newOrder._id,
         posOrderId: orderId,
         status: newOrder.status,
-        totalAmount: newOrder.totalAmount,
+        totalAmount: newOrder.orderSummary.total,
         estimatedDeliveryTime: newOrder.estimatedDeliveryTime,
         customer: {
           name: customer.name,

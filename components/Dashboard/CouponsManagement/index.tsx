@@ -19,8 +19,10 @@ import {
   AlertCircle,
   CheckCircle,
   XCircle,
-  Clock
+  Clock,
+  ArrowLeft
 } from 'lucide-react'
+import Link from 'next/link'
 import { cn } from '../../../funcs/utils'
 import { theme, responsive } from '../../../funcs/responsive'
 import Button from '../../Button'
@@ -273,17 +275,25 @@ export default function CouponsManagement() {
       <div className={cn('border-b', theme.border.primary, theme.background.card)}>
         <div className={cn(responsive.container.lg, 'px-4 py-6')}>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h1 className={cn(
-                'font-bold',
-                responsive.fontSize['2xl'],
-                theme.text.primary
-              )}>
-                إدارة القسائم
-              </h1>
-              <p className={cn('mt-1', theme.text.secondary)}>
-                إنشاء وإدارة قسائم الخصم للمتجر
-              </p>
+            <div className="flex items-center space-x-4 rtl:space-x-reverse">
+              <Link href="/dash">
+                <Button variant="outline" size="sm">
+                  <ArrowLeft className="w-4 h-4 mr-2 rtl:ml-2 rtl:rotate-180" />
+                  العودة للوحة التحكم
+                </Button>
+              </Link>
+              <div>
+                <h1 className={cn(
+                  'font-bold',
+                  responsive.fontSize['2xl'],
+                  theme.text.primary
+                )}>
+                  إدارة القسائم
+                </h1>
+                <p className={cn('mt-1', theme.text.secondary)}>
+                  إنشاء وإدارة قسائم الخصم للمتجر
+                </p>
+              </div>
             </div>
             
             <Button

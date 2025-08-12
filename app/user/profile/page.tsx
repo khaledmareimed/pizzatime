@@ -27,6 +27,7 @@ import { User as UserType, UserAddress } from '../../../funcs/collections/user';
 import Card from '../../../components/Card';
 import Button from '../../../components/Button';
 import AddressForm from '../../../components/AddressForm';
+import OrdersSection from '../../../components/OrdersSection';
 
 interface UserProfile {
   name: string;
@@ -568,6 +569,9 @@ export default function ProfilePage() {
                 </div>
               </div>
             </Card>
+
+            {/* Orders Section */}
+            <OrdersSection />
 
             {/* Sign Out */}
             <Card className="p-6">

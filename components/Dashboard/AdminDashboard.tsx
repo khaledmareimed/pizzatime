@@ -13,10 +13,14 @@ import {
   LogOut,
   Home,
   Activity,
-  Calculator
+  Calculator,
+  FileText,
+  Ticket
 } from 'lucide-react'
 import Link from 'next/link'
 import Button from '@/components/Button'
+import SystemLogs from '@/components/Dashboard/SystemLogs'
+import { formatJordanCurrency } from '@/funcs/jordanLocale'
 import { cn } from '@/funcs/utils'
 import { theme, responsive, animations } from '@/funcs/responsive'
 
@@ -41,14 +45,14 @@ export default function AdminDashboard({ session }: AdminDashboardProps) {
       icon: ShoppingBag,
       title: 'إدارة الطلبات',
       description: 'عرض وإدارة جميع طلبات العملاء',
-      href: '/admin/orders',
+      href: '/dash/orders',
       color: 'bg-blue-500'
     },
     {
       icon: User,
       title: 'إدارة المستخدمين',
       description: 'عرض وإدارة حسابات العملاء',
-      href: '/admin/users',
+      href: '/dash/users',
       color: 'bg-green-500'
     },
     {
@@ -59,11 +63,18 @@ export default function AdminDashboard({ session }: AdminDashboardProps) {
       color: 'bg-orange-500'
     },
     {
+      icon: Ticket,
+      title: 'إدارة الكوبونات',
+      description: 'إنشاء وإدارة كوبونات الخصم',
+      href: '/dash/coupons',
+      color: 'bg-purple-500'
+    },
+    {
       icon: CreditCard,
       title: 'التقارير المالية',
       description: 'عرض المبيعات والإحصائيات',
-      href: '/admin/reports',
-      color: 'bg-purple-500'
+      href: '/dash/reports',
+      color: 'bg-indigo-500'
     },
     {
       icon: Activity,
@@ -71,6 +82,13 @@ export default function AdminDashboard({ session }: AdminDashboardProps) {
       description: 'مراقبة حالة التطبيق وقاعدة البيانات',
       href: '/dash/status',
       color: 'bg-red-500'
+    },
+    {
+      icon: FileText,
+      title: 'سجل النظام',
+      description: 'عرض جميع أنشطة النظام والمستخدمين',
+      href: '/dash/logs',
+      color: 'bg-gray-600'
     }
   ]
 
@@ -133,7 +151,7 @@ export default function AdminDashboard({ session }: AdminDashboardProps) {
         {[
           { title: 'إجمالي الطلبات', value: '1,247', icon: ShoppingBag, color: 'bg-blue-500' },
           { title: 'عدد العملاء', value: '324', icon: User, color: 'bg-green-500' },
-          { title: 'الإيرادات اليوم', value: '12,450 ر.س', icon: CreditCard, color: 'bg-purple-500' },
+          { title: 'الإيرادات اليوم', value: formatJordanCurrency(12450), icon: CreditCard, color: 'bg-purple-500' },
           { title: 'الطلبات المعلقة', value: '18', icon: Clock, color: 'bg-yellow-500' }
         ].map((stat, index) => (
           <motion.div
@@ -216,64 +234,13 @@ export default function AdminDashboard({ session }: AdminDashboardProps) {
         ))}
       </div>
 
-      {/* Recent Activity */}
+      {/* System Logs */}
       <motion.div
         {...animations.slideIn}
         transition={{ delay: 0.5 }}
-        className="bg-white dark:bg-gray-800 rounded-3xl shadow-lg p-6 mt-8"
+        className="mt-8"
       >
-        <h2 className={cn(
-          'text-xl font-bold mb-6 text-gray-900 dark:text-white',
-          theme.text.primary
-        )}>
-          النشاط الأخير للنظام
-        </h2>
-        <div className="space-y-4">
-          {[
-            {
-              title: 'طلب جديد من أحمد محمد - #1247',
-              time: 'منذ 5 دقائق',
-              status: 'معلق',
-              price: '125 ر.س'
-            },
-            {
-              title: 'تم تسجيل عميل جديد - سارة أحمد',
-              time: 'منذ 15 دقيقة',
-              status: 'مكتمل',
-              price: ''
-            },
-            {
-              title: 'طلب مكتمل - #1246',
-              time: 'منذ 30 دقيقة',
-              status: 'تم التوصيل',
-              price: '89 ر.س'
-            }
-          ].map((activity, index) => (
-            <div key={index} className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
-              <div>
-                <p className={cn('font-medium text-gray-900 dark:text-white', theme.text.primary)}>
-                  {activity.title}
-                </p>
-                <p className={cn('text-sm text-gray-600 dark:text-gray-300', theme.text.secondary)}>
-                  {activity.time}
-                </p>
-              </div>
-              <div className="text-left">
-                <p className={cn(
-                  'text-sm font-medium',
-                  activity.status === 'معلق' ? 'text-yellow-600 dark:text-yellow-400' : 'text-green-600 dark:text-green-400'
-                )}>
-                  {activity.status}
-                </p>
-                {activity.price && (
-                  <p className={cn('text-sm font-bold text-gray-900 dark:text-white', theme.text.primary)}>
-                    {activity.price}
-                  </p>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+        <SystemLogs limit={20} showViewAll={true} title="النشاط الأخير للنظام" />
       </motion.div>
     </div>
   )

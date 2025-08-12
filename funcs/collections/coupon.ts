@@ -129,6 +129,12 @@ export const CouponSchema = {
       ref: 'User',
       required: true
     },
+    userEmail: {
+      type: String,
+      required: true,
+      lowercase: true,
+      trim: true
+    },
     usageCount: {
       type: Number,
       default: 1,
@@ -143,6 +149,7 @@ export const CouponSchema = {
 
 export interface CouponUsage {
   userId: string
+  userEmail: string
   usageCount: number
   lastUsed: Date
 }
@@ -189,6 +196,7 @@ export interface CouponValidationResult {
 
 export interface OrderValidationData {
   userId: string
+  userEmail: string
   orderTotal: number
   categoryIds: string[]
   productIds: string[]
@@ -227,10 +235,15 @@ export function validateCouponForOrder(
     }
   }
   
-  // Check user usage limit
-  const userUsage = coupon.usedBy.find(usage => usage.userId === orderData.userId)
+  // Check user usage limit (check both userId and userEmail for security)
+  const userUsage = coupon.usedBy.find(usage => 
+    usage.userId === orderData.userId || usage.userEmail === orderData.userEmail
+  )
   if (userUsage && userUsage.usageCount >= coupon.userUsageLimit) {
-    return { isValid: false, error: 'لقد تجاوزت الحد المسموح لاستخدام هذه القسيمة' }
+    return { 
+      isValid: false, 
+      error: `لقد تجاوزت الحد المسموح لاستخدام هذه القسيمة (${coupon.userUsageLimit} مرات كحد أقصى)` 
+    }
   }
   
   // Check category restrictions

@@ -16,7 +16,13 @@ export { ProductSchema, ProductIndexes } from './product'
 export type { Product } from './product'
 
 export { OrderSchema, OrderIndexes } from './order'
-export type { Order } from './order'
+export type { Order, OrderItem } from './order'
+
+export { SystemLogSchema, SystemLogIndexes } from './systemlog'
+export type { SystemLog } from './systemlog'
+
+export { FinancialSchema, FinancialIndexes, FinancialHelpers } from './financial'
+export type { Financial } from './financial'
 
 // Re-export base interfaces and manager from main collections file
 export { 

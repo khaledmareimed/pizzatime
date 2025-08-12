@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     // Find user by email
     const user = await userCollection.model.findOne({ 
       email: session.user.email 
-    }).populate('orders').populate('favorites')
+    })
 
     if (!user) {
       return NextResponse.json(

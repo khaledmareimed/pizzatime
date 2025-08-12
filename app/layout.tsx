@@ -35,15 +35,15 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <SessionProvider>
-          <FavoritesProvider>
-            <CartProvider>
-              <ToastProvider>
+          <ToastProvider>
+            <FavoritesProvider>
+              <CartProvider>
                 <UserInitializer />
                 {children}
                 <ToastWrapper />
-              </ToastProvider>
-            </CartProvider>
-          </FavoritesProvider>
+              </CartProvider>
+            </FavoritesProvider>
+          </ToastProvider>
         </SessionProvider>
       </body>
     </html>

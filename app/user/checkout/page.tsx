@@ -7,6 +7,7 @@ import { LogIn, MapPin, Plus } from 'lucide-react';
 import { cn } from '../../../funcs/utils';
 import { theme, responsive, animations } from '../../../funcs/responsive';
 import { useCartContext } from '../../../funcs/contexts/CartContext';
+import { useToastContext } from '../../../funcs/contexts/ToastContext';
 import { UserAddress } from '../../../funcs/collections/user';
 import OrderDetails, { OrderItem } from '../../../components/OrderDetails';
 import CheckoutForm from '../../../components/CheckoutForm';
@@ -21,8 +22,21 @@ export default function CheckoutPage() {
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
   const [showAddressForm, setShowAddressForm] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    code: string;
+    name: string;
+    discountAmount: number;
+    couponId: string;
+  } | null>(null);
+  const [orderTotals, setOrderTotals] = useState<{
+    subtotal: number;
+    couponDiscount: number;
+    deliveryFee: number;
+    total: number;
+  } | null>(null);
   const { items: cartItems, updateQuantity, removeItem, clearCart } = useCartContext();
   const { data: session, status } = useSession();
+  const toast = useToastContext();
 
   // Convert CartItems to OrderItems for the OrderDetails component
   const orderItems: OrderItem[] = useMemo(() => {
@@ -109,14 +123,14 @@ export default function CheckoutPage() {
           setSelectedAddressId(newAddress._id);
         }
         
-        alert('تم إضافة العنوان بنجاح!');
+        toast.success('تم إضافة العنوان بنجاح!');
       } else {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to add address');
       }
     } catch (error) {
       console.error('Error adding address:', error);
-      alert(`حدث خطأ في إضافة العنوان: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`);
+      toast.error('خطأ في إضافة العنوان', error instanceof Error ? error.message : 'خطأ غير معروف');
     }
   };
 
@@ -129,6 +143,22 @@ export default function CheckoutPage() {
     removeItem(itemId);
   };
 
+  const handleCouponChange = (coupon: {
+    code: string;
+    name: string;
+    discountAmount: number;
+    couponId: string;
+  } | null, totals: {
+    subtotal: number;
+    couponDiscount: number;
+    deliveryFee: number;
+    total: number;
+  }) => {
+    setAppliedCoupon(coupon);
+    setOrderTotals(totals);
+  };
+
+
   const handleFormSubmit = async (formData: any) => {
     setIsSubmitting(true);
     
@@ -138,26 +168,92 @@ export default function CheckoutPage() {
       
       if (unavailableItems.length > 0) {
         const itemNames = unavailableItems.map(item => item.name).join('، ');
-        alert(`العناصر التالية غير متوفرة حالياً: ${itemNames}\nيرجى إزالتها من السلة للمتابعة.`);
+        toast.warning('عناصر غير متوفرة', `العناصر التالية غير متوفرة حالياً: ${itemNames}. يرجى إزالتها من السلة للمتابعة.`);
         setIsSubmitting(false);
         return;
       }
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Here you would typically send the order to your backend
-      console.log('Order submitted:', { formData, orderItems });
-      
-      // Show success message or redirect
-      alert('تم تقديم الطلب بنجاح! سنتصل بك لتأكيد الطلب.');
-      
-      // Clear cart after successful order
-      clearCart();
+
+      // Get selected address
+      const selectedAddress = userAddresses.find(addr => addr._id === selectedAddressId);
+      if (!selectedAddress) {
+        toast.error('عنوان التوصيل مطلوب', 'يرجى اختيار عنوان التوصيل');
+        setIsSubmitting(false);
+        return;
+      }
+
+      const orderData = {
+        items: cartItems.map(item => ({
+          id: item.id,
+          productId: item.productId,
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          originalPrice: item.originalPrice,
+          image: item.image,
+          categoryId: item.categoryId,
+          addons: item.addons,
+          options: item.options,
+          comments: item.comments
+        })),
+        deliveryAddress: {
+          name: selectedAddress.name,
+          recipientName: selectedAddress.recipientName,
+          city: selectedAddress.city,
+          phone: selectedAddress.phone,
+          addressDetails: selectedAddress.addressDetails
+        },
+        notes: formData.notes,
+        paymentMethod: 'cash', // Default to cash for now
+        deliveryMethod: 'delivery',
+        // Include coupon data if applied
+        ...(appliedCoupon && {
+          coupon: {
+            code: appliedCoupon.code,
+            name: appliedCoupon.name,
+            discountAmount: appliedCoupon.discountAmount,
+            couponId: appliedCoupon.couponId
+          }
+        }),
+        // Include order totals
+        ...(orderTotals && {
+          totals: {
+            subtotal: orderTotals.subtotal,
+            couponDiscount: orderTotals.couponDiscount,
+            deliveryFee: orderTotals.deliveryFee,
+            total: orderTotals.total
+          }
+        })
+      };
+
+      // Submit order to API
+      const response = await fetch('/api/users/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderData)
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        // Show success message
+        toast.success('تم تقديم الطلب بنجاح!', `رقم الطلب: ${result.data.orderId}. سنتصل بك لتأكيد الطلب.`);
+        
+        // Clear cart after successful order
+        clearCart();
+        
+        // Redirect to order details page
+        setTimeout(() => {
+          window.location.href = `/user/order/${result.data.orderId}`;
+        }, 2000); // Give time to show the toast
+      } else {
+        throw new Error(result.error || 'فشل في إنشاء الطلب');
+      }
       
     } catch (error) {
       console.error('Error submitting order:', error);
-      alert('خطأ في تقديم الطلب. يرجى المحاولة مرة أخرى.');
+      toast.error('خطأ في تقديم الطلب', `${error instanceof Error ? error.message : 'خطأ غير معروف'}. يرجى المحاولة مرة أخرى.`);
     } finally {
       setIsSubmitting(false);
     }
@@ -234,6 +330,7 @@ export default function CheckoutPage() {
               items={orderItems}
               onUpdateQuantity={handleUpdateQuantity}
               onRemoveItem={handleRemoveItem}
+              onCouponChange={handleCouponChange}
             />
           ) : (
             <div className={cn(
@@ -418,6 +515,7 @@ export default function CheckoutPage() {
                       </div>
                     )}
                   </Card>
+
 
                   {/* Checkout Form - Only show if address is selected */}
                   {selectedAddressId && (

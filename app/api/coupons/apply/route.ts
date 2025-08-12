@@ -65,6 +65,7 @@ export async function POST(request: NextRequest) {
         // Prepare validation data
         const validationData: OrderValidationData = {
           userId: session.user.id,
+          userEmail: session.user.email || '',
           orderTotal: parseFloat(orderData.orderTotal),
           categoryIds: orderData.categoryIds,
           productIds: orderData.productIds
@@ -77,8 +78,10 @@ export async function POST(request: NextRequest) {
           throw new Error(validationResult.error || 'القسيمة غير صالحة')
         }
 
-        // Check if user has already used this coupon for this order
-        const existingUsage = coupon.usedBy.find(usage => usage.userId === session.user.id)
+        // Check if user has already used this coupon (check both userId and email)
+        const existingUsage = coupon.usedBy.find(usage => 
+          usage.userId === session.user.id || usage.userEmail === (session.user.email || '')
+        )
         
         // Update coupon usage
         const updateQuery: any = {
@@ -90,11 +93,15 @@ export async function POST(request: NextRequest) {
           // Increment existing user usage
           updateQuery.$inc['usedBy.$.usageCount'] = 1
           updateQuery.$set['usedBy.$.lastUsed'] = new Date()
+          updateQuery.$set['usedBy.$.userEmail'] = session.user.email || '' // Update email if needed
           
           await db.collection('coupons').updateOne(
             { 
               _id: new ObjectId(coupon._id),
-              'usedBy.userId': session.user.id 
+              $or: [
+                { 'usedBy.userId': session.user.id },
+                { 'usedBy.userEmail': session.user.email || '' }
+              ]
             },
             updateQuery,
             { session: session_db }
@@ -104,6 +111,7 @@ export async function POST(request: NextRequest) {
           updateQuery.$push = {
             usedBy: {
               userId: session.user.id,
+              userEmail: session.user.email || '',
               usageCount: 1,
               lastUsed: new Date()
             }
@@ -125,7 +133,7 @@ export async function POST(request: NextRequest) {
           discountAmount: validationResult.discountAmount,
           orderTotal: validationData.orderTotal,
           appliedAt: new Date(),
-          userEmail: session.user.email
+          userEmail: session.user.email || ''
         }, { session: session_db })
 
         return {

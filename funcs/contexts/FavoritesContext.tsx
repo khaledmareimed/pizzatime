@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useSession } from 'next-auth/react';
 import { Product } from '../collections/product';
+import { useToastContext } from './ToastContext';
 
 interface FavoritesContextType {
   favorites: Product[];
@@ -25,6 +26,7 @@ export function FavoritesProvider({ children }: FavoritesProviderProps) {
   const { data: session } = useSession();
   const [favorites, setFavorites] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const toast = useToastContext();
 
   // Fetch favorites when user is authenticated
   useEffect(() => {
@@ -65,7 +67,7 @@ export function FavoritesProvider({ children }: FavoritesProviderProps) {
 
   const addToFavorites = async (productId: string): Promise<boolean> => {
     if (!session?.user?.email) {
-      alert('يجب تسجيل الدخول لإضافة المنتجات للمفضلة');
+      toast.warning('تسجيل الدخول مطلوب', 'يجب تسجيل الدخول لإضافة المنتجات للمفضلة');
       return false;
     }
 
@@ -80,6 +82,7 @@ export function FavoritesProvider({ children }: FavoritesProviderProps) {
 
       if (response.ok) {
         await refreshFavorites(); // Refresh to get updated list
+        toast.success('تم إضافة المنتج للمفضلة!');
         return true;
       } else {
         const errorData = await response.json();
@@ -87,17 +90,17 @@ export function FavoritesProvider({ children }: FavoritesProviderProps) {
         
         // Show user-friendly error messages
         if (response.status === 400 && errorData.error === 'Product already in favorites') {
-          alert('هذا المنتج موجود بالفعل في المفضلة');
+          toast.info('منتج موجود', 'هذا المنتج موجود بالفعل في المفضلة');
         } else if (response.status === 404) {
-          alert('المنتج غير موجود');
+          toast.error('منتج غير موجود', 'المنتج غير موجود');
         } else {
-          alert('حدث خطأ في إضافة المنتج للمفضلة');
+          toast.error('خطأ في إضافة المنتج', 'حدث خطأ في إضافة المنتج للمفضلة');
         }
         return false;
       }
     } catch (error) {
       console.error('Error adding to favorites:', error);
-      alert('حدث خطأ في الاتصال. يرجى المحاولة مرة أخرى');
+      toast.error('خطأ في الاتصال', 'حدث خطأ في الاتصال. يرجى المحاولة مرة أخرى');
       return false;
     }
   };
@@ -114,6 +117,7 @@ export function FavoritesProvider({ children }: FavoritesProviderProps) {
 
       if (response.ok) {
         await refreshFavorites(); // Refresh to get updated list
+        toast.success('تم إزالة المنتج من المفضلة');
         return true;
       } else {
         const errorData = await response.json();
@@ -121,15 +125,15 @@ export function FavoritesProvider({ children }: FavoritesProviderProps) {
         
         // Show user-friendly error messages
         if (response.status === 400 && errorData.error === 'Product not in favorites') {
-          alert('هذا المنتج غير موجود في المفضلة');
+          toast.info('منتج غير موجود', 'هذا المنتج غير موجود في المفضلة');
         } else {
-          alert('حدث خطأ في إزالة المنتج من المفضلة');
+          toast.error('خطأ في إزالة المنتج', 'حدث خطأ في إزالة المنتج من المفضلة');
         }
         return false;
       }
     } catch (error) {
       console.error('Error removing from favorites:', error);
-      alert('حدث خطأ في الاتصال. يرجى المحاولة مرة أخرى');
+      toast.error('خطأ في الاتصال', 'حدث خطأ في الاتصال. يرجى المحاولة مرة أخرى');
       return false;
     }
   };

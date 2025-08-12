@@ -1,5 +1,5 @@
 import { BaseDocument } from '../collections'
-import { Types } from 'mongoose'
+import { Types, Schema } from 'mongoose'
 
 /**
  * User Collection Schema and Interface
@@ -29,11 +29,11 @@ export const UserSchema = {
     enum: ['user', 'admin'],
     default: 'user'
   },
-  // Array of order IDs that belong to this user
-  orders: [{
-    type: Types.ObjectId,
-    ref: 'Order'
-  }],
+  // Array of order data - using Mixed type to handle both ObjectIds and order objects
+  orders: {
+    type: [Schema.Types.Mixed],
+    default: []
+  },
   // Array of favorite product IDs
   favorites: [{
     type: Types.ObjectId,
@@ -109,11 +109,56 @@ export interface UserAddress {
   isDefault: boolean
 }
 
+export interface UserOrder {
+  orderId: string
+  items: Array<{
+    productId: string
+    productName: string
+    quantity: number
+    price: number
+    originalPrice: number
+    image?: string
+    categoryId: string
+    addons: Array<{
+      id: string
+      name: string
+      price: number
+    }>
+    options: Array<{
+      optionTitle: string
+      choiceName: string
+      choicePrice: number
+    }>
+    comments?: string
+  }>
+  deliveryAddress: {
+    name: string
+    recipientName: string
+    city: string
+    phone: string
+    addressDetails: string
+  }
+  orderSummary: {
+    subtotal: number
+    addonsTotal: number
+    optionsTotal: number
+    deliveryFee: number
+    discount: number
+    total: number
+  }
+  paymentMethod: 'cash' | 'card' | 'online'
+  deliveryMethod: 'pickup' | 'delivery'
+  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'out-for-delivery' | 'delivered' | 'cancelled'
+  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded'
+  notes?: string
+  orderDate: Date
+}
+
 export interface User extends BaseDocument {
   email: string
   name: string
   role: 'user' | 'admin'
-  orders: Types.ObjectId[]
+  orders: any[] // Mixed type to handle both ObjectIds and UserOrder objects
   favorites: Types.ObjectId[]
   addresses: UserAddress[]
   googleId?: string

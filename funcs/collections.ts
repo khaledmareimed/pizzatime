@@ -186,3 +186,12 @@ export type { Product } from './collections/product'
 
 export { OrderSchema, OrderIndexes } from './collections/order'
 export type { Order } from './collections/order'
+
+export { SystemLogSchema, SystemLogIndexes } from './collections/systemlog'
+export type { SystemLog } from './collections/systemlog'
+
+export { FinancialSchema, FinancialIndexes, FinancialHelpers } from './collections/financial'
+export type { Financial } from './collections/financial'
+
+export { CouponSchema, CouponIndexes } from './collections/coupon'
+export type { Coupon, OrderValidationData } from './collections/coupon'

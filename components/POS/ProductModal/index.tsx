@@ -46,7 +46,7 @@ export default function ProductModal({ product, onAddToCart, onClose }: ProductM
     let total = displayPrice * quantity
     
     // Add addon prices
-    const addonsTotal = selectedAddons.reduce((sum, addon) => sum + addon.toppingPrice, 0) * quantity
+    const addonsTotal = selectedAddons.reduce((sum, addon) => sum + (addon.toppingPrice || 0), 0) * quantity
     
     // Add option prices
     const optionsTotal = Object.values(selectedOptions).reduce((sum: number, option: any) => 
@@ -125,37 +125,6 @@ export default function ProductModal({ product, onAddToCart, onClose }: ProductM
             {displayPrice.toFixed(2)} ر.س
           </div>
 
-          {/* Mobile Addons */}
-          {product.addonsAndToppings.length > 0 && (
-            <div className="mb-6">
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
-                الإضافات والتوابل
-              </h3>
-              <div className="space-y-2">
-                {product.addonsAndToppings.map((addon, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handleAddonToggle(addon)}
-                    className={`w-full flex items-center justify-between p-3 rounded-lg text-left transition-colors ${
-                      selectedAddons.some(a => a.toppingName === addon.toppingName)
-                        ? 'bg-green-500 text-white'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    <span className="flex-1">{addon.toppingName}</span>
-                    <span className={`font-medium ${
-                      selectedAddons.some(a => a.toppingName === addon.toppingName)
-                        ? 'text-white'
-                        : 'text-green-600 dark:text-green-400'
-                    }`}>
-                      +{addon.toppingPrice.toFixed(2)} ر.س
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Mobile Options */}
           {product.productOptions.map((option, optionIndex) => (
             <div key={optionIndex} className="mb-6">
@@ -189,6 +158,37 @@ export default function ProductModal({ product, onAddToCart, onClose }: ProductM
               </div>
             </div>
           ))}
+
+          {/* Mobile Addons */}
+          {product.addonsAndToppings.length > 0 && (
+            <div className="mb-6">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
+                الإضافات والتوابل
+              </h3>
+              <div className="space-y-2">
+                {product.addonsAndToppings.map((addon, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleAddonToggle(addon)}
+                    className={`w-full flex items-center justify-between p-3 rounded-lg text-left transition-colors ${
+                      selectedAddons.some(a => a.toppingName === addon.toppingName)
+                        ? 'bg-green-500 text-white'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    <span className="flex-1">{addon.toppingName}</span>
+                    <span className={`font-medium ${
+                      selectedAddons.some(a => a.toppingName === addon.toppingName)
+                        ? 'text-white'
+                        : 'text-green-600 dark:text-green-400'
+                    }`}>
+                      +{(addon.toppingPrice || 0).toFixed(2)} ر.س
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Mobile Comments */}
           <div className="mb-6">
