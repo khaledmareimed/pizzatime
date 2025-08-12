@@ -99,6 +99,21 @@ export async function createOrderFinancialRecords(order: Order): Promise<void> {
       })
     }
 
+    // Manual discount if applicable
+    if (order.orderSummary.manualDiscount > 0) {
+      await createFinancialTransaction({
+        orderId: order.orderId,
+        userId: order.userId,
+        type: 'discount',
+        category: 'discounts',
+        amount: order.orderSummary.manualDiscount,
+        description: `خصم إداري للطلب #${order.orderId.slice(-6)}`,
+        metadata: {
+          discountType: 'manual'
+        }
+      })
+    }
+
   } catch (error) {
     console.error('Error creating order financial records:', error)
   }

@@ -3,6 +3,7 @@ import { auth } from '../../../../auth'
 import { createCollection, User, UserSchema, UserIndexes, Order, OrderSchema, OrderIndexes, SystemLog, SystemLogSchema, SystemLogIndexes, Coupon, CouponSchema, CouponIndexes } from '../../../../funcs/collections'
 import { calculateCartSummary } from '../../../../funcs/types/cart'
 import { ObjectId } from 'mongodb'
+import { sendNewOrderNotification } from '../../../../funcs/whatsapp'
 
 /**
  * GET /api/users/orders - Get user's order history
@@ -415,6 +416,45 @@ export async function POST(request: NextRequest) {
     })
 
     await logEntry.save()
+
+    // STEP 4: Send WhatsApp notification to admin
+    try {
+      console.log('Attempting to send WhatsApp notification for order:', newOrder.orderId)
+      console.log('WhatsApp config check:', {
+        hasPhone: !!process.env.WHATSAPP_ADMIN_PHONE,
+        hasApiKey: !!process.env.WHATSAPP_API_KEY,
+        phone: process.env.WHATSAPP_ADMIN_PHONE,
+        apiKey: process.env.WHATSAPP_API_KEY ? 'configured' : 'missing'
+      })
+      
+      const notificationData = {
+        orderId: newOrder.orderId,
+        customerName: deliveryAddress.recipientName || deliveryAddress.name,
+        customerPhone: deliveryAddress.phone,
+        total: orderSummary.total,
+        items: items.map((item: any) => ({
+          productName: item.name || item.productName,
+          quantity: item.quantity,
+          price: item.price || 0
+        })),
+        deliveryMethod: deliveryMethod,
+        paymentMethod: paymentMethod,
+        orderDate: newOrder.orderDate.toISOString()
+      }
+      
+      console.log('Notification data:', JSON.stringify(notificationData, null, 2))
+      
+      const result = await sendNewOrderNotification(notificationData)
+      
+      if (result) {
+        console.log('WhatsApp notification sent successfully for order:', newOrder.orderId)
+      } else {
+        console.log('WhatsApp notification failed for order:', newOrder.orderId)
+      }
+    } catch (whatsappError) {
+      console.error('Failed to send WhatsApp notification:', whatsappError)
+      // Don't fail the order if WhatsApp notification fails
+    }
 
     return NextResponse.json({
       success: true,

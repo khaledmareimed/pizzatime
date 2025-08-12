@@ -190,7 +190,7 @@ export async function PATCH(request: NextRequest) {
         })
       }
 
-      // Create discount transaction if applicable
+      // Create coupon discount transaction if applicable
       if (order.orderSummary.couponDiscount > 0) {
         await createFinancialTransaction({
           orderId: order.orderId,
@@ -202,6 +202,22 @@ export async function PATCH(request: NextRequest) {
           metadata: {
             adminId: session.user.id,
             couponCode: order.coupon?.code
+          }
+        })
+      }
+
+      // Create manual discount transaction if applicable
+      if (order.orderSummary.manualDiscount > 0) {
+        await createFinancialTransaction({
+          orderId: order.orderId,
+          userId: order.userId,
+          type: 'discount',
+          category: 'discounts',
+          amount: order.orderSummary.manualDiscount,
+          description: `خصم إداري للطلب #${order.orderId.slice(-6)}`,
+          metadata: {
+            adminId: session.user.id,
+            discountType: 'manual'
           }
         })
       }

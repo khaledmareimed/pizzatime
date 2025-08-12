@@ -39,6 +39,7 @@ interface Order {
     addonsTotal: number;
     optionsTotal: number;
     couponDiscount: number;
+    manualDiscount: number;
     deliveryFee: number;
     total: number;
   };
@@ -448,6 +449,12 @@ export default function OrderDetailsPage() {
                   <div className="flex justify-between text-green-600 dark:text-green-400">
                     <span>خصم القسيمة:</span>
                     <span>-{order.orderSummary.couponDiscount.toFixed(2)} ر.س</span>
+                  </div>
+                )}
+                {order.orderSummary.manualDiscount > 0 && (
+                  <div className="flex justify-between text-orange-600 dark:text-orange-400">
+                    <span>خصم إداري:</span>
+                    <span>-{order.orderSummary.manualDiscount.toFixed(2)} ر.س</span>
                   </div>
                 )}
                 <div className="flex justify-between">

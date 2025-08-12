@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import { createCollection, Order, OrderSchema, OrderIndexes, SystemLog, SystemLogSchema, SystemLogIndexes } from '@/funcs/collections'
+import { createCollection, Order, OrderSchema, OrderIndexes, SystemLog, SystemLogSchema, SystemLogIndexes, User, UserSchema, UserIndexes } from '@/funcs/collections'
 
 export async function PATCH(
   request: NextRequest,
@@ -57,6 +57,54 @@ export async function PATCH(
 
     if (!updatedOrder) {
       return NextResponse.json({ error: 'Failed to update order' }, { status: 500 })
+    }
+
+    // Sync the updated order status to the user's orders array
+    try {
+      const userCollection = await createCollection<User>('users', UserSchema, {
+        indexes: UserIndexes
+      })
+      
+      // Find the user who owns this order
+      const user = await userCollection.model.findOne({ 
+        'orders.orderId': updatedOrder.orderId 
+      })
+      
+      if (user && user.orders) {
+        // Update the specific order in the user's orders array
+        const orderIndex = user.orders.findIndex((order: any) => 
+          order.orderId === updatedOrder.orderId
+        )
+        
+        if (orderIndex !== -1) {
+          // Update the order status and other fields in the user's orders array
+          const userOrderUpdate: any = {}
+          
+          if (status && status !== existingOrder.status) {
+            userOrderUpdate[`orders.${orderIndex}.status`] = status
+          }
+          
+          if (paymentStatus && paymentStatus !== existingOrder.paymentStatus) {
+            userOrderUpdate[`orders.${orderIndex}.paymentStatus`] = paymentStatus
+          }
+          
+          if (notes !== undefined) {
+            userOrderUpdate[`orders.${orderIndex}.notes`] = notes
+          }
+          
+          // Apply the updates to the user's orders array
+          if (Object.keys(userOrderUpdate).length > 0) {
+            await userCollection.model.updateOne(
+              { _id: user._id },
+              { $set: userOrderUpdate }
+            )
+            console.log(`Synced order ${updatedOrder.orderId} status to user ${user._id}`)
+          }
+        }
+      }
+    } catch (syncError) {
+      console.error('Error syncing order status to user orders array:', syncError)
+      // Don't fail the admin update if user sync fails
     }
 
     // Create system log for the update

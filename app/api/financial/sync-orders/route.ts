@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
           })
         }
 
-        // Discount if applicable
+        // Coupon discount if applicable
         if (order.orderSummary.couponDiscount > 0) {
           await createFinancialTransaction({
             orderId: order.orderId,
@@ -92,6 +92,23 @@ export async function POST(request: NextRequest) {
               syncedBy: session.user.id,
               syncedAt: new Date(),
               couponCode: order.coupon?.code
+            }
+          })
+        }
+
+        // Manual discount if applicable
+        if (order.orderSummary.manualDiscount > 0) {
+          await createFinancialTransaction({
+            orderId: order.orderId,
+            userId: order.userId,
+            type: 'discount',
+            category: 'discounts',
+            amount: order.orderSummary.manualDiscount,
+            description: `خصم إداري للطلب #${order.orderId.slice(-6)} (مزامنة)`,
+            metadata: {
+              syncedBy: session.user.id,
+              syncedAt: new Date(),
+              discountType: 'manual'
             }
           })
         }
