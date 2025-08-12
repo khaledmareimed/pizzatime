@@ -200,6 +200,7 @@ export interface OrderValidationData {
   orderTotal: number
   categoryIds: string[]
   productIds: string[]
+  isAdminOverride?: boolean // Allow admin to bypass user usage limits
 }
 
 export function validateCouponForOrder(
@@ -235,14 +236,16 @@ export function validateCouponForOrder(
     }
   }
   
-  // Check user usage limit (check both userId and userEmail for security)
-  const userUsage = coupon.usedBy.find(usage => 
-    usage.userId === orderData.userId || usage.userEmail === orderData.userEmail
-  )
-  if (userUsage && userUsage.usageCount >= coupon.userUsageLimit) {
-    return { 
-      isValid: false, 
-      error: `لقد تجاوزت الحد المسموح لاستخدام هذه القسيمة (${coupon.userUsageLimit} مرات كحد أقصى)` 
+  // Check user usage limit (skip if admin override is enabled)
+  if (!orderData.isAdminOverride) {
+    const userUsage = coupon.usedBy.find(usage => 
+      usage.userId === orderData.userId || usage.userEmail === orderData.userEmail
+    )
+    if (userUsage && userUsage.usageCount >= coupon.userUsageLimit) {
+      return { 
+        isValid: false, 
+        error: `لقد تجاوزت الحد المسموح لاستخدام هذه القسيمة (${coupon.userUsageLimit} مرات كحد أقصى)` 
+      }
     }
   }
   

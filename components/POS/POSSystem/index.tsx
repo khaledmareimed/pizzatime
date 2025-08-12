@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Session } from 'next-auth'
+import { useRouter } from 'next/navigation'
 import CategorySelector from '../CategorySelector'
 import ProductGrid from '../ProductGrid'
 import OrderCart from '../OrderCart'
@@ -22,6 +23,7 @@ interface POSSystemProps {
 }
 
 export default function POSSystem({ session }: POSSystemProps) {
+  const router = useRouter()
   const [categories, setCategories] = useState<Category[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
@@ -45,6 +47,15 @@ export default function POSSystem({ session }: POSSystemProps) {
     code: string
     name: string
     discountAmount: number
+    usageInfo?: {
+      userUsageCount: number
+      userUsageLimit: number
+      remainingUserUses: number
+      totalUsageCount: number
+      totalUsageLimit: number | null
+      remainingTotalUses: number | null
+      validUntil: string
+    }
   } | null>(null)
   const [appliedDiscount, setAppliedDiscount] = useState<{
     type: 'percentage' | 'flat'
@@ -133,9 +144,27 @@ export default function POSSystem({ session }: POSSystemProps) {
         setAppliedCoupon({
           code: result.data.code,
           name: result.data.name,
-          discountAmount: result.data.discountAmount
+          discountAmount: result.data.discountAmount,
+          usageInfo: result.data.usageInfo
         })
-        success(`تم تطبيق القسيمة ${result.data.code} بنجاح`)
+        
+        // Show usage information in success message
+        const usageInfo = result.data.usageInfo
+        let usageMessage = `تم تطبيق القسيمة ${result.data.code} بنجاح`
+        
+        // Check if admin override was used (user has exceeded their limit but admin applied it)
+        const isAdminOverride = session?.user?.role === 'admin' && usageInfo && usageInfo.remainingUserUses <= 0 && usageInfo.userUsageCount >= usageInfo.userUsageLimit
+        
+        if (isAdminOverride) {
+          usageMessage += ` (تم التطبيق بصلاحيات الإدارة - تجاوز حد الاستخدام)`
+        } else if (usageInfo) {
+          if (usageInfo.remainingUserUses > 0) {
+            usageMessage += ` (يمكنك استخدامها ${usageInfo.remainingUserUses} مرة أخرى)`
+          } else {
+            usageMessage += ` (هذه آخر مرة يمكنك استخدامها)`
+          }
+        }
+        success(usageMessage)
       } else {
         throw new Error(result.error || 'فشل في تطبيق القسيمة')
       }
@@ -371,8 +400,31 @@ export default function POSSystem({ session }: POSSystemProps) {
                 </h1>
               </div>
             </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              {session.user.email}
+            <div className="flex items-center space-x-3 space-x-reverse">
+              <Button
+                onClick={() => router.push('/dash')}
+                variant="outline"
+                size="sm"
+                className="flex items-center space-x-2 space-x-reverse bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5v4" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 5v4" />
+                </svg>
+                <span>لوحة التحكم</span>
+              </Button>
+              <Button
+                onClick={() => router.push('/dash/pos/orders')}
+                variant="outline"
+                size="sm"
+                className="flex items-center space-x-2 space-x-reverse bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                </svg>
+                <span>إدارة الطلبات</span>
+              </Button>
             </div>
           </div>
         </div>
@@ -429,19 +481,46 @@ export default function POSSystem({ session }: POSSystemProps) {
 
       {/* Mobile Checkout Button */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-40">
-        <Button
-          onClick={handleCheckout}
-          disabled={cartSummary.totalItems === 0}
-          variant="primary"
-          size="lg"
-          fullWidth
-          className="bg-blue-500 hover:bg-blue-600"
-        >
-          <div className="flex items-center justify-between w-full">
-            <span>عرض الطلب ({cartSummary.totalItems})</span>
-            <span className="font-bold">{cartSummary.total.toFixed(2)} ر.س</span>
+        {cartSummary.totalItems === 0 ? (
+          <div className="flex space-x-2 space-x-reverse">
+            <Button
+              onClick={() => router.push('/dash/pos/orders')}
+              variant="outline"
+              size="lg"
+              className="flex-1 flex items-center justify-center space-x-2 space-x-reverse"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+              </svg>
+              <span>الطلبات</span>
+            </Button>
+            <Button
+              onClick={() => router.push('/dash')}
+              variant="outline"
+              size="lg"
+              className="flex-1 flex items-center justify-center space-x-2 space-x-reverse"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+              </svg>
+              <span>الرئيسية</span>
+            </Button>
           </div>
-        </Button>
+        ) : (
+          <Button
+            onClick={handleCheckout}
+            disabled={cartSummary.totalItems === 0}
+            variant="primary"
+            size="lg"
+            fullWidth
+            className="bg-blue-500 hover:bg-blue-600"
+          >
+            <div className="flex items-center justify-between w-full">
+              <span>عرض الطلب ({cartSummary.totalItems})</span>
+              <span className="font-bold">{cartSummary.total.toFixed(2)} ر.س</span>
+            </div>
+          </Button>
+        )}
       </div>
 
       {/* Mobile Checkout Modal */}

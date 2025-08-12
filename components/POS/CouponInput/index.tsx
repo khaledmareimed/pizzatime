@@ -9,10 +9,20 @@ interface CouponInputProps {
     code: string
     name: string
     discountAmount: number
+    usageInfo?: {
+      userUsageCount: number
+      userUsageLimit: number
+      remainingUserUses: number
+      totalUsageCount: number
+      totalUsageLimit: number | null
+      remainingTotalUses: number | null
+      validUntil: string
+    }
   } | null
   onRemoveCoupon: () => void
   isLoading?: boolean
   disabled?: boolean
+  isAdmin?: boolean // To show admin override indicator
 }
 
 export default function CouponInput({
@@ -20,7 +30,8 @@ export default function CouponInput({
   appliedCoupon,
   onRemoveCoupon,
   isLoading = false,
-  disabled = false
+  disabled = false,
+  isAdmin = false
 }: CouponInputProps) {
   const [couponCode, setCouponCode] = useState('')
   const [isApplying, setIsApplying] = useState(false)
@@ -65,6 +76,35 @@ export default function CouponInput({
               <p className="text-sm font-bold text-green-800 dark:text-green-200">
                 خصم: -{appliedCoupon.discountAmount.toFixed(2)} ر.س
               </p>
+              {appliedCoupon.usageInfo && (
+                <div className="mt-2 space-y-1">
+                  <p className="text-xs text-green-600 dark:text-green-400">
+                    استخدمت هذه القسيمة {appliedCoupon.usageInfo.userUsageCount} من {appliedCoupon.usageInfo.userUsageLimit} مرات
+                  </p>
+                  {appliedCoupon.usageInfo.remainingUserUses > 0 ? (
+                    <p className="text-xs text-green-600 dark:text-green-400">
+                      يمكنك استخدامها {appliedCoupon.usageInfo.remainingUserUses} مرة أخرى
+                    </p>
+                  ) : isAdmin && appliedCoupon.usageInfo.userUsageCount >= appliedCoupon.usageInfo.userUsageLimit && (
+                    <div className="flex items-center space-x-1 space-x-reverse">
+                      <svg className="w-3 h-3 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                      <p className="text-xs text-orange-600 dark:text-orange-400 font-medium">
+                        تم التطبيق بصلاحيات الإدارة (تجاوز حد الاستخدام)
+                      </p>
+                    </div>
+                  )}
+                  {appliedCoupon.usageInfo.totalUsageLimit && (
+                    <p className="text-xs text-green-600 dark:text-green-400">
+                      استخدامات القسيمة الإجمالية: {appliedCoupon.usageInfo.totalUsageCount} من {appliedCoupon.usageInfo.totalUsageLimit}
+                    </p>
+                  )}
+                  <p className="text-xs text-green-600 dark:text-green-400">
+                    صالحة حتى: {new Date(appliedCoupon.usageInfo.validUntil).toLocaleDateString('ar-SA')}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
           <button

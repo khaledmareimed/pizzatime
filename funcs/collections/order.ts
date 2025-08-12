@@ -51,6 +51,7 @@ export const OrderSchema = {
     optionsTotal: { type: Number, default: 0, min: 0 },
     deliveryFee: { type: Number, default: 0, min: 0 },
     couponDiscount: { type: Number, default: 0, min: 0 },
+    manualDiscount: { type: Number, default: 0, min: 0 },
     total: { type: Number, required: true, min: 0.01 }
   },
   coupon: {
@@ -92,6 +93,13 @@ export const OrderSchema = {
   orderDate: {
     type: Date,
     default: Date.now
+  },
+  isInternalOrder: {
+    type: Boolean,
+    default: false
+  },
+  posOrderId: {
+    type: String
   }
 }
 
@@ -133,6 +141,7 @@ export interface Order extends BaseDocument {
     optionsTotal: number
     deliveryFee: number
     couponDiscount: number
+    manualDiscount: number
     total: number
   }
   coupon?: {
@@ -149,6 +158,8 @@ export interface Order extends BaseDocument {
   estimatedDeliveryTime?: Date
   actualDeliveryTime?: Date
   orderDate: Date
+  isInternalOrder?: boolean
+  posOrderId?: string
 }
 
 // Default indexes for Order collection
@@ -161,6 +172,8 @@ export const OrderIndexes = [
   { fields: { paymentStatus: 1 } },
   { fields: { estimatedDeliveryTime: 1 } },
   { fields: { userId: 1, status: 1 } },
-  { fields: { userId: 1, orderDate: -1 } }
+  { fields: { userId: 1, orderDate: -1 } },
+  { fields: { isInternalOrder: 1 } },
+  { fields: { posOrderId: 1 } }
 ]
 

@@ -33,6 +33,8 @@ export async function POST(request: NextRequest) {
       items, 
       customer, 
       summary,
+      coupon,
+      discount,
       paymentMethod,
       deliveryMethod,
       notes,
@@ -54,7 +56,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!summary || !summary.total || summary.total <= 0) {
+    if (!summary || !summary.finalTotal || summary.finalTotal <= 0) {
       return NextResponse.json(
         { error: 'Valid order total is required' },
         { status: 400 }
@@ -66,54 +68,100 @@ export async function POST(request: NextRequest) {
       indexes: OrderIndexes
     })
 
-    // Transform cart items to order items format
+    // Transform cart items to order items format according to schema
     const orderItems = items.map((item: any) => ({
       productId: item.productId,
+      productName: item.name,
       quantity: item.quantity,
-      unitPrice: item.price,
-      customizations: {
-        addons: item.addons || [],
-        options: item.options || [],
-        notes: item.comments || ''
-      }
+      price: item.price,
+      originalPrice: item.originalPrice || item.price,
+      image: item.image,
+      categoryId: item.categoryId,
+      addons: item.addons || [],
+      options: item.options || [],
+      comments: item.comments || ''
     }))
 
-    // Create delivery address from customer data
+    // Create delivery address according to schema
     const deliveryAddress = {
-      street: customer.address?.street || 'N/A (Pickup)',
-      city: customer.address?.city || 'N/A',
-      zipCode: customer.address?.zipCode || 'N/A',
-      instructions: customer.address?.notes || ''
+      name: customer.name,
+      recipientName: customer.name,
+      city: customer.city || 'N/A',
+      phone: customer.phone,
+      addressDetails: customer.address || (deliveryMethod === 'pickup' ? 'Pickup from restaurant' : 'N/A')
     }
+
+    // Create order summary according to schema
+    const orderSummary = {
+      subtotal: summary.total || 0,
+      addonsTotal: summary.addonsTotal || 0,
+      optionsTotal: summary.optionsTotal || 0,
+      deliveryFee: summary.deliveryFee || 0,
+      couponDiscount: summary.couponDiscount || 0,
+      manualDiscount: summary.manualDiscount || 0,
+      total: summary.finalTotal
+    }
+
+    // Create coupon data if applied
+    const couponData = coupon ? {
+      couponId: coupon.code,
+      code: coupon.code,
+      name: coupon.name,
+      discountAmount: coupon.discountAmount
+    } : undefined
 
     // Create new internal order
     const newOrder = new orderCollection.model({
       userId: 'internal', // Special identifier for internal orders
+      orderId: orderId,
       items: orderItems,
       deliveryAddress,
-      totalAmount: summary.total,
+      orderSummary,
+      coupon: couponData,
+      paymentMethod: paymentMethod || 'cash',
+      deliveryMethod: deliveryMethod || 'pickup',
       status: 'confirmed', // Internal orders start as confirmed
-      paymentStatus: paymentMethod === 'cash' ? 'paid' : 'pending',
+      paymentStatus: 'pending', // POS orders start as pending, will be paid when delivered
       estimatedDeliveryTime: deliveryMethod === 'pickup' 
         ? new Date(Date.now() + 15 * 60 * 1000) // 15 minutes for pickup
         : new Date(Date.now() + 45 * 60 * 1000), // 45 minutes for delivery
-      
-      // Additional fields for internal orders
-      customerInfo: {
-        name: customer.name,
-        phone: customer.phone,
-        email: customer.email || '',
-        deliveryMethod: deliveryMethod || 'pickup',
-        paymentMethod: paymentMethod || 'cash'
-      },
-      orderSource: 'pos',
-      createdBy: session.user.email,
-      isInternalOrder: true,
-      posOrderId: orderId,
-      notes: notes || ''
+      notes: notes || '',
+      orderDate: new Date(),
+      isInternalOrder: true, // Mark as internal POS order
+      posOrderId: orderId // Store the POS order ID
     })
 
     await newOrder.save()
+
+    // Apply coupon usage if coupon was used
+    if (coupon && coupon.code) {
+      try {
+        const couponApplyResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/coupons/apply`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Cookie': request.headers.get('Cookie') || ''
+          },
+          body: JSON.stringify({
+            couponCode: coupon.code,
+            orderId: newOrder._id.toString(),
+            orderData: {
+              orderTotal: summary.total || 0,
+              categoryIds: [...new Set(items.map((item: any) => item.categoryId))],
+              productIds: items.map((item: any) => item.productId)
+            }
+          })
+        })
+
+        if (!couponApplyResponse.ok) {
+          console.warn('Failed to apply coupon usage tracking:', await couponApplyResponse.text())
+          // Don't fail the order creation if coupon tracking fails
+        }
+      } catch (error) {
+        console.warn('Error applying coupon usage:', error)
+        // Don't fail the order creation if coupon tracking fails
+      }
+    }
 
     return NextResponse.json({
       success: true,
@@ -173,9 +221,10 @@ export async function GET(request: NextRequest) {
       indexes: OrderIndexes
     })
 
-    // Build query for internal orders
+    // Build query for internal orders (only POS orders)
     const query: any = {
-      isInternalOrder: true
+      isInternalOrder: true,
+      userId: 'internal' // Only orders created from POS system
     }
 
     if (status) {
@@ -187,7 +236,7 @@ export async function GET(request: NextRequest) {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .populate('items.productId')
+      .lean()
 
     // Get total count for pagination
     const totalOrders = await orderCollection.model.countDocuments(query)

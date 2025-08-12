@@ -88,13 +88,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check if user is admin to enable override
+    const isAdmin = session.user.role === 'admin'
+
     // Prepare validation data
     const validationData: OrderValidationData = {
       userId: session.user.id,
       userEmail: session.user.email || '',
       orderTotal: parseFloat(orderData.orderTotal),
       categoryIds: orderData.categoryIds,
-      productIds: orderData.productIds
+      productIds: orderData.productIds,
+      isAdminOverride: isAdmin // Admin can bypass user usage limits
     }
 
     // Validate coupon
@@ -107,7 +111,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Return success with discount information
+    // Get user usage information
+    const userUsage = coupon.usedBy.find(usage => 
+      usage.userId === validationData.userId || usage.userEmail === validationData.userEmail
+    )
+    const userUsageCount = userUsage ? userUsage.usageCount : 0
+    const remainingUserUses = coupon.userUsageLimit - userUsageCount
+    const remainingTotalUses = coupon.usageLimit ? coupon.usageLimit - coupon.usageCount : null
+
+    // Return success with discount information and usage details
     return NextResponse.json({
       success: true,
       data: {
@@ -119,7 +131,16 @@ export async function POST(request: NextRequest) {
         discountValue: coupon.discountValue,
         discountAmount: validationResult.discountAmount,
         minimumOrderAmount: coupon.minimumOrderAmount,
-        maximumDiscountAmount: coupon.maximumDiscountAmount
+        maximumDiscountAmount: coupon.maximumDiscountAmount,
+        usageInfo: {
+          userUsageCount,
+          userUsageLimit: coupon.userUsageLimit,
+          remainingUserUses,
+          totalUsageCount: coupon.usageCount,
+          totalUsageLimit: coupon.usageLimit,
+          remainingTotalUses,
+          validUntil: coupon.endDate
+        }
       },
       message: 'تم تطبيق القسيمة بنجاح'
     })

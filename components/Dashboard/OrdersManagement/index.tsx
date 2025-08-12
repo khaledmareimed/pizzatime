@@ -87,6 +87,8 @@ interface Order {
   orderDate: string
   createdAt: string
   updatedAt: string
+  isInternalOrder?: boolean
+  posOrderId?: string
 }
 
 interface AdminOrdersManagementProps {
@@ -439,8 +441,14 @@ export default function AdminOrdersManagement({ session }: AdminOrdersManagement
                             <div className="flex-1">
                               <div className="flex items-center space-x-4 rtl:space-x-reverse mb-2">
                                 <h3 className={cn('font-bold text-gray-900 dark:text-white', theme.text.primary)}>
-                                  طلب #{order.orderId.slice(-6)}
+                                  طلب #{order.posOrderId ? order.posOrderId.slice(-6) : order.orderId.slice(-6)}
                                 </h3>
+                                {/* Show POS badge only for POS orders */}
+                                {order.isInternalOrder && order.userId === 'internal' && (
+                                  <span className="px-2 py-1 rounded-lg text-xs font-medium bg-purple-500 text-white">
+                                    POS
+                                  </span>
+                                )}
                                 <span className={cn('px-2 py-1 rounded-lg text-xs font-medium text-white', statusColor)}>
                                   {getStatusText(order.status)}
                                 </span>
@@ -479,6 +487,9 @@ export default function AdminOrdersManagement({ session }: AdminOrdersManagement
                               <div className="mt-2 text-xs">
                                 <span className={cn('text-gray-500 dark:text-gray-500', theme.text.secondary)}>
                                   {order.items.length} منتج • {paymentMethodTranslations[order.paymentMethod]} • {deliveryMethodTranslations[order.deliveryMethod]}
+                                  {order.isInternalOrder && order.userId === 'internal' && (
+                                    <span className="text-purple-600 dark:text-purple-400 font-medium"> • طلب من نقاط البيع</span>
+                                  )}
                                 </span>
                               </div>
                             </div>

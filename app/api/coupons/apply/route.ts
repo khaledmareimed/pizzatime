@@ -62,13 +62,17 @@ export async function POST(request: NextRequest) {
           throw new Error('رمز القسيمة غير صحيح')
         }
 
+        // Check if user is admin to enable override
+        const isAdmin = session.user.role === 'admin'
+
         // Prepare validation data
         const validationData: OrderValidationData = {
           userId: session.user.id,
           userEmail: session.user.email || '',
           orderTotal: parseFloat(orderData.orderTotal),
           categoryIds: orderData.categoryIds,
-          productIds: orderData.productIds
+          productIds: orderData.productIds,
+          isAdminOverride: isAdmin // Admin can bypass user usage limits
         }
 
         // Re-validate coupon (security check)

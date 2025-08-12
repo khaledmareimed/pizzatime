@@ -66,6 +66,7 @@ interface Order {
     optionsTotal: number
     deliveryFee: number
     couponDiscount: number
+    manualDiscount: number
     total: number
   }
   coupon?: {
@@ -84,6 +85,8 @@ interface Order {
   orderDate: string
   createdAt: string
   updatedAt: string
+  isInternalOrder?: boolean
+  posOrderId?: string
 }
 
 interface AdminOrderDetailsProps {
@@ -269,11 +272,21 @@ export default function AdminOrderDetails({ session, userId, orderId }: AdminOrd
               </Button>
             </Link>
             <div>
-              <h1 className={cn('text-2xl font-bold text-gray-900 dark:text-white', theme.text.primary)}>
-                طلب #{order.orderId.slice(-6)}
-              </h1>
+              <div className="flex items-center space-x-3 rtl:space-x-reverse mb-2">
+                <h1 className={cn('text-2xl font-bold text-gray-900 dark:text-white', theme.text.primary)}>
+                  طلب #{order.posOrderId ? order.posOrderId.slice(-6) : order.orderId.slice(-6)}
+                </h1>
+                {order.isInternalOrder && order.userId === 'internal' && (
+                  <span className="px-3 py-1 rounded-lg text-sm font-medium bg-purple-500 text-white">
+                    POS
+                  </span>
+                )}
+              </div>
               <p className={cn('text-sm text-gray-600 dark:text-gray-300', theme.text.secondary)}>
                 تفاصيل الطلب وإدارة الحالة
+                {order.isInternalOrder && order.userId === 'internal' && (
+                  <span className="text-purple-600 dark:text-purple-400 font-medium"> • طلب من نقاط البيع</span>
+                )}
               </p>
             </div>
           </div>
@@ -440,6 +453,15 @@ export default function AdminOrderDetails({ session, userId, orderId }: AdminOrd
                   <span className={cn('text-gray-600 dark:text-gray-400', theme.text.secondary)}>خصم الكوبون</span>
                   <span className="font-medium text-green-600 dark:text-green-400">
                     -{formatJordanCurrency(order.orderSummary.couponDiscount)}
+                  </span>
+                </div>
+              )}
+              
+              {order.orderSummary.manualDiscount > 0 && (
+                <div className="flex justify-between">
+                  <span className={cn('text-gray-600 dark:text-gray-400', theme.text.secondary)}>الخصم الإداري</span>
+                  <span className="font-medium text-green-600 dark:text-green-400">
+                    -{formatJordanCurrency(order.orderSummary.manualDiscount)}
                   </span>
                 </div>
               )}

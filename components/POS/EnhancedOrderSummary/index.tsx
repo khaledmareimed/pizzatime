@@ -10,6 +10,15 @@ interface EnhancedOrderSummaryProps {
     code: string
     name: string
     discountAmount: number
+    usageInfo?: {
+      userUsageCount: number
+      userUsageLimit: number
+      remainingUserUses: number
+      totalUsageCount: number
+      totalUsageLimit: number | null
+      remainingTotalUses: number | null
+      validUntil: string
+    }
   } | null
   appliedDiscount?: {
     type: 'percentage' | 'flat'

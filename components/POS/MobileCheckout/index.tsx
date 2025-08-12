@@ -24,6 +24,15 @@ interface MobileCheckoutProps {
     code: string
     name: string
     discountAmount: number
+    usageInfo?: {
+      userUsageCount: number
+      userUsageLimit: number
+      remainingUserUses: number
+      totalUsageCount: number
+      totalUsageLimit: number | null
+      remainingTotalUses: number | null
+      validUntil: string
+    }
   } | null
   onApplyCoupon: (code: string) => Promise<void>
   onRemoveCoupon: () => void
@@ -111,7 +120,13 @@ export default function MobileCheckout({
 
   const canProceed = () => {
     if (step === 'cart') return items.length > 0
-    if (step === 'summary') return customerData.name && (deliveryMethod === 'pickup' || (customerData.phone && customerData.address.trim() && customerData.city.trim()))
+    if (step === 'summary') {
+      // Always require name and phone
+      if (!customerData.name.trim() || !customerData.phone.trim()) return false
+      // For delivery, also require address and city
+      if (deliveryMethod === 'delivery' && (!customerData.address.trim() || !customerData.city.trim())) return false
+      return true
+    }
     if (step === 'payment') return true
     return false
   }
@@ -248,22 +263,20 @@ export default function MobileCheckout({
                   </div>
                 )}
 
-                {/* Show phone only for delivery */}
-                {deliveryMethod === 'delivery' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      رقم الهاتف *
-                    </label>
-                    <input
-                      type="tel"
-                      value={customerData.phone}
-                      onChange={(e) => setCustomerData({...customerData, phone: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                      placeholder="أدخل رقم الهاتف"
-                      disabled={isProcessingOrder}
-                    />
-                  </div>
-                )}
+                {/* Phone field - always required */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    رقم الهاتف *
+                  </label>
+                  <input
+                    type="tel"
+                    value={customerData.phone}
+                    onChange={(e) => setCustomerData({...customerData, phone: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                    placeholder="أدخل رقم الهاتف"
+                    disabled={isProcessingOrder}
+                  />
+                </div>
 
                 {/* Always show optional comments */}
                 <div>
@@ -355,6 +368,7 @@ export default function MobileCheckout({
                   appliedCoupon={appliedCoupon}
                   onRemoveCoupon={onRemoveCoupon}
                   disabled={isProcessingOrder}
+                  isAdmin={true} // POS users are admins
                 />
               )}
 

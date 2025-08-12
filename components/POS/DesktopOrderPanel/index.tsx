@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import { useRouter } from 'next/navigation'
 import { CartItem, CartSummary } from '@/funcs/types/cart'
 import OrderCart from '../OrderCart'
 import EnhancedOrderSummary from '../EnhancedOrderSummary'
@@ -22,6 +23,15 @@ interface DesktopOrderPanelProps {
     code: string
     name: string
     discountAmount: number
+    usageInfo?: {
+      userUsageCount: number
+      userUsageLimit: number
+      remainingUserUses: number
+      totalUsageCount: number
+      totalUsageLimit: number | null
+      remainingTotalUses: number | null
+      validUntil: string
+    }
   } | null
   onApplyCoupon: (code: string) => Promise<void>
   onRemoveCoupon: () => void
@@ -58,6 +68,7 @@ export default function DesktopOrderPanel({
   deliveryPrice,
   isProcessingOrder = false
 }: DesktopOrderPanelProps) {
+  const router = useRouter()
   const [customerData, setCustomerData] = React.useState({
     name: '',
     phone: '',
@@ -103,7 +114,13 @@ export default function DesktopOrderPanel({
 
   const canProceed = () => {
     if (step === 'cart') return items.length > 0
-    if (step === 'summary') return customerData.name && (deliveryMethod === 'pickup' || (customerData.phone && customerData.address.trim() && customerData.city.trim()))
+    if (step === 'summary') {
+      // Always require name and phone
+      if (!customerData.name.trim() || !customerData.phone.trim()) return false
+      // For delivery, also require address and city
+      if (deliveryMethod === 'delivery' && (!customerData.address.trim() || !customerData.city.trim())) return false
+      return true
+    }
     if (step === 'payment') return true
     return false
   }
@@ -158,12 +175,55 @@ export default function DesktopOrderPanel({
       <div className="flex-1 overflow-y-auto min-h-0">
         {/* Step 1: Order Details */}
         {step === 'cart' && (
-          <OrderCart
-            items={items}
-            onUpdateQuantity={onUpdateQuantity}
-            onRemoveItem={onRemoveItem}
-            onClearCart={onClearCart}
-          />
+          <>
+            {items.length === 0 ? (
+              <div className="p-4">
+                <div className="text-center py-8">
+                  <svg className="w-16 h-16 mx-auto text-gray-400 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2-2v6.01" />
+                  </svg>
+                  <p className="text-gray-500 dark:text-gray-400 mb-4">لا توجد أصناف في الطلب</p>
+                  <p className="text-sm text-gray-400 dark:text-gray-500 mb-6">اختر المنتجات من القائمة لبدء طلب جديد</p>
+                  
+                  {/* Quick Actions */}
+                  <div className="space-y-3">
+                    <Button
+                      onClick={() => router.push('/dash/pos/orders')}
+                      variant="outline"
+                      size="md"
+                      fullWidth
+                      className="flex items-center justify-center space-x-2 space-x-reverse"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                      </svg>
+                      <span>عرض الطلبات السابقة</span>
+                    </Button>
+                    
+                    <Button
+                      onClick={() => router.push('/dash')}
+                      variant="outline"
+                      size="md"
+                      fullWidth
+                      className="flex items-center justify-center space-x-2 space-x-reverse"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                      </svg>
+                      <span>لوحة التحكم الرئيسية</span>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <OrderCart
+                items={items}
+                onUpdateQuantity={onUpdateQuantity}
+                onRemoveItem={onRemoveItem}
+                onClearCart={onClearCart}
+              />
+            )}
+          </>
         )}
 
         {/* Step 2: Delivery & User Info */}
@@ -229,24 +289,20 @@ export default function DesktopOrderPanel({
                 </div>
               )}
 
-              {/* Show phone and address only for delivery */}
-              {deliveryMethod === 'delivery' && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      رقم الهاتف *
-                    </label>
-                    <input
-                      type="tel"
-                      value={customerData.phone}
-                      onChange={(e) => setCustomerData({...customerData, phone: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                      placeholder="أدخل رقم الهاتف"
-                      disabled={isProcessingOrder}
-                    />
-                  </div>
-                </>
-              )}
+              {/* Phone field - always required */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  رقم الهاتف *
+                </label>
+                <input
+                  type="tel"
+                  value={customerData.phone}
+                  onChange={(e) => setCustomerData({...customerData, phone: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                  placeholder="أدخل رقم الهاتف"
+                  disabled={isProcessingOrder}
+                />
+              </div>
 
               {/* Always show optional comments */}
               <div>
@@ -338,6 +394,7 @@ export default function DesktopOrderPanel({
                 appliedCoupon={appliedCoupon}
                 onRemoveCoupon={onRemoveCoupon}
                 disabled={isProcessingOrder}
+                isAdmin={true} // POS users are admins
               />
             )}
 
