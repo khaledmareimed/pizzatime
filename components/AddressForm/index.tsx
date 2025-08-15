@@ -2,12 +2,25 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, MapPin, Phone, User, Save } from 'lucide-react';
+import { X, MapPin, Phone, User, Save, DollarSign } from 'lucide-react';
 import { cn } from '../../funcs/utils';
 import { theme, responsive } from '../../funcs/responsive';
 import { UserAddress } from '../../funcs/collections/user';
+import { formatJordanCurrency } from '../../funcs/jordanLocale';
 import Button from '../Button';
 import Card from '../Card';
+
+interface DeliveryLocation {
+  _id: string
+  locationName: string
+  customerCost: number
+}
+
+interface DeliveryArea {
+  _id: string
+  cityName: string
+  locations: DeliveryLocation[]
+}
 
 interface AddressFormProps {
   isOpen: boolean;
@@ -28,12 +41,26 @@ export default function AddressForm({
     name: '',
     recipientName: '',
     city: '',
+    cityId: '',
+    location: '',
+    locationId: '',
+    deliveryCost: 0,
     phone: '',
     addressDetails: '',
     isDefault: false
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [deliveryAreas, setDeliveryAreas] = useState<DeliveryArea[]>([]);
+  const [loadingAreas, setLoadingAreas] = useState(true);
+  const [selectedCity, setSelectedCity] = useState<DeliveryArea | null>(null);
+
+  // Load delivery areas on component mount
+  useEffect(() => {
+    if (isOpen) {
+      loadDeliveryAreas();
+    }
+  }, [isOpen]);
 
   // Update form data when editingAddress changes
   useEffect(() => {
@@ -42,22 +69,56 @@ export default function AddressForm({
         name: editingAddress.name || '',
         recipientName: editingAddress.recipientName || '',
         city: editingAddress.city || '',
+        cityId: editingAddress.cityId || '',
+        location: editingAddress.location || '',
+        locationId: editingAddress.locationId || '',
+        deliveryCost: editingAddress.deliveryCost || 0,
         phone: editingAddress.phone || '',
         addressDetails: editingAddress.addressDetails || '',
         isDefault: editingAddress.isDefault || false
       });
+      
+      // Set selected city when editing
+      if (editingAddress.city && deliveryAreas.length > 0) {
+        const city = deliveryAreas.find(area => area.cityName === editingAddress.city);
+        setSelectedCity(city || null);
+      }
     } else {
       setFormData({
         name: '',
         recipientName: '',
         city: '',
+        cityId: '',
+        location: '',
+        locationId: '',
+        deliveryCost: 0,
         phone: '',
         addressDetails: '',
         isDefault: false
       });
+      setSelectedCity(null);
     }
     setErrors({}); // Clear errors when switching between add/edit
-  }, [editingAddress, isOpen]);
+  }, [editingAddress, isOpen, deliveryAreas]);
+
+  const loadDeliveryAreas = async () => {
+    try {
+      setLoadingAreas(true);
+      const response = await fetch('/api/public/delivery-areas');
+      const result = await response.json();
+
+      if (result.success) {
+        setDeliveryAreas(result.data.areas || []);
+      } else {
+        setErrors({ general: 'خطأ في تحميل مناطق التوصيل' });
+      }
+    } catch (error) {
+      console.error('Error loading delivery areas:', error);
+      setErrors({ general: 'خطأ في تحميل مناطق التوصيل' });
+    } finally {
+      setLoadingAreas(false);
+    }
+  };
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -71,7 +132,15 @@ export default function AddressForm({
     }
 
     if (!formData.city.trim()) {
-      newErrors.city = 'اسم المدينة مطلوب';
+      newErrors.city = 'المدينة مطلوبة';
+    }
+
+    if (!formData.location.trim()) {
+      newErrors.location = 'المنطقة مطلوبة';
+    }
+
+    if (formData.deliveryCost <= 0) {
+      newErrors.location = 'يرجى اختيار منطقة صحيحة';
     }
 
     if (!formData.phone.trim()) {
@@ -88,6 +157,43 @@ export default function AddressForm({
     return Object.keys(newErrors).length === 0;
   };
 
+  const handleCityChange = (cityId: string) => {
+    const city = deliveryAreas.find(area => area._id === cityId);
+    setSelectedCity(city || null);
+    
+    setFormData(prev => ({
+      ...prev,
+      city: city?.cityName || '',
+      cityId: cityId,
+      location: '',
+      locationId: '',
+      deliveryCost: 0
+    }));
+
+    // Clear location error when city changes
+    if (errors.location) {
+      setErrors(prev => ({ ...prev, location: '' }));
+    }
+  };
+
+  const handleLocationChange = (locationId: string) => {
+    if (!selectedCity) return;
+    
+    const location = selectedCity.locations.find(loc => loc._id === locationId);
+    
+    setFormData(prev => ({
+      ...prev,
+      location: location?.locationName || '',
+      locationId: locationId,
+      deliveryCost: location?.customerCost || 0
+    }));
+
+    // Clear location error when location changes
+    if (errors.location) {
+      setErrors(prev => ({ ...prev, location: '' }));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -100,6 +206,10 @@ export default function AddressForm({
         name: formData.name.trim(),
         recipientName: formData.recipientName.trim(),
         city: formData.city.trim(),
+        cityId: formData.cityId.trim(),
+        location: formData.location.trim(),
+        locationId: formData.locationId.trim(),
+        deliveryCost: formData.deliveryCost,
         phone: formData.phone.trim(),
         addressDetails: formData.addressDetails.trim(),
         isDefault: formData.isDefault
@@ -111,6 +221,8 @@ export default function AddressForm({
           name: '',
           recipientName: '',
           city: '',
+          location: '',
+          deliveryCost: 0,
           phone: '',
           addressDetails: '',
           isDefault: false
@@ -249,7 +361,7 @@ export default function AddressForm({
                 )}
               </div>
 
-              {/* City */}
+              {/* City Selection */}
               <div>
                 <label className={cn(
                   'block text-sm font-medium mb-2',
@@ -259,25 +371,98 @@ export default function AddressForm({
                 </label>
                 <div className="relative">
                   <MapPin className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="text"
-                    value={formData.city}
-                    onChange={(e) => handleInputChange('city', e.target.value)}
-                    placeholder="مثل: الرياض، جدة، الدمام"
+                  <select
+                    value={formData.cityId}
+                    onChange={(e) => handleCityChange(e.target.value)}
+                    disabled={loadingAreas}
                     className={cn(
-                      'w-full pr-10 pl-4 py-3 rounded-xl border focus:ring-2 focus:ring-orange-500 transition-colors',
+                      'w-full pr-10 pl-4 py-3 rounded-xl border focus:ring-2 focus:ring-orange-500 transition-colors appearance-none',
                       theme.background.card,
                       errors.city ? 'border-red-500' : theme.border.primary,
                       theme.text.primary,
-                      'placeholder-gray-400 dark:placeholder-gray-500'
+                      loadingAreas ? 'opacity-50 cursor-not-allowed' : ''
                     )}
                     dir="rtl"
-                  />
+                  >
+                    <option value="">
+                      {loadingAreas ? 'جاري التحميل...' : 'اختر المدينة'}
+                    </option>
+                    {deliveryAreas.map((area) => (
+                      <option key={area._id} value={area._id}>
+                        {area.cityName}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
                 </div>
                 {errors.city && (
                   <p className="text-red-500 text-sm mt-1">{errors.city}</p>
                 )}
               </div>
+
+              {/* Location Selection */}
+              <div>
+                <label className={cn(
+                  'block text-sm font-medium mb-2',
+                  theme.text.primary
+                )}>
+                  المنطقة *
+                </label>
+                <div className="relative">
+                  <MapPin className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <select
+                    value={formData.locationId}
+                    onChange={(e) => handleLocationChange(e.target.value)}
+                    disabled={!selectedCity || selectedCity.locations.length === 0}
+                    className={cn(
+                      'w-full pr-10 pl-4 py-3 rounded-xl border focus:ring-2 focus:ring-orange-500 transition-colors appearance-none',
+                      theme.background.card,
+                      errors.location ? 'border-red-500' : theme.border.primary,
+                      theme.text.primary,
+                      !selectedCity ? 'opacity-50 cursor-not-allowed' : ''
+                    )}
+                    dir="rtl"
+                  >
+                    <option value="">
+                      {!selectedCity 
+                        ? 'اختر المدينة أولاً' 
+                        : selectedCity.locations.length === 0 
+                          ? 'لا توجد مناطق متاحة'
+                          : 'اختر المنطقة'
+                      }
+                    </option>
+                    {selectedCity?.locations.map((location) => (
+                      <option key={location._id} value={location._id}>
+                        {location.locationName}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
+                {errors.location && (
+                  <p className="text-red-500 text-sm mt-1">{errors.location}</p>
+                )}
+              </div>
+
+              {/* Delivery Cost Display */}
+              {formData.deliveryCost > 0 && (
+                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    <span className={cn('text-sm font-medium', theme.text.primary)}>
+                      تكلفة التوصيل: {formatJordanCurrency(formData.deliveryCost)}
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {/* Phone */}
               <div>

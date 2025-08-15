@@ -24,6 +24,9 @@ export type { SystemLog } from './systemlog'
 export { FinancialSchema, FinancialIndexes, FinancialHelpers } from './financial'
 export type { Financial } from './financial'
 
+export { SettingsSchema, SettingsIndexes, getDefaultSettings } from './settings'
+export type { Settings, DeliverySchedule, DeliveryArea, DeliveryLocation, Banner, RestaurantInfo, SystemSettings, DaySchedule } from './settings'
+
 // Re-export base interfaces and manager from main collections file
 export { 
   CollectionManager, 

@@ -135,6 +135,10 @@ export async function GET(request: NextRequest) {
         name: sanitizeString(addr.name || ''),
         recipientName: sanitizeString(addr.recipientName || user.name || 'مستلم غير محدد'),
         city: sanitizeString(addr.city || ''),
+        cityId: sanitizeString(addr.cityId || ''),
+        location: sanitizeString(addr.location || ''),
+        locationId: sanitizeString(addr.locationId || ''),
+        deliveryCost: Number(addr.deliveryCost) || 3.0,
         phone: sanitizeString(addr.phone || ''),
         addressDetails: sanitizeString(addr.addressDetails || ''),
         isDefault: Boolean(addr.isDefault)
@@ -205,7 +209,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { name, recipientName, city, phone, addressDetails, isDefault } = body
+    const { name, recipientName, city, cityId, location, locationId, deliveryCost, phone, addressDetails, isDefault } = body
 
     await connectToDatabase()
     const db = mongoose.connection.db
@@ -257,6 +261,10 @@ export async function POST(request: NextRequest) {
       name: sanitizeString(name),
       recipientName: sanitizeString(recipientName || user.name || 'مستلم غير محدد'),
       city: sanitizeString(city),
+      cityId: sanitizeString(cityId || ''),
+      location: sanitizeString(location || ''),
+      locationId: sanitizeString(locationId || ''),
+      deliveryCost: Number(deliveryCost) || 3.0,
       phone: sanitizeString(phone),
       addressDetails: sanitizeString(addressDetails),
       isDefault: Boolean(isDefault) || existingAddresses.length === 0
@@ -296,6 +304,8 @@ export async function POST(request: NextRequest) {
       name: sanitizeString(addr.name || ''),
       recipientName: sanitizeString(addr.recipientName || ''),
       city: sanitizeString(addr.city || ''),
+      location: sanitizeString(addr.location || ''),
+      deliveryCost: Number(addr.deliveryCost) || 3.0,
       phone: sanitizeString(addr.phone || ''),
       addressDetails: sanitizeString(addr.addressDetails || ''),
       isDefault: Boolean(addr.isDefault)
@@ -358,7 +368,7 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    const { addressId, name, recipientName, city, phone, addressDetails, isDefault } = body
+    const { addressId, name, recipientName, city, location, deliveryCost, phone, addressDetails, isDefault } = body
 
     // Validate addressId
     if (!addressId || typeof addressId !== 'string') {
@@ -430,6 +440,8 @@ export async function PUT(request: NextRequest) {
     if (name !== undefined) existingAddresses[addressIndex].name = sanitizeString(name)
     if (recipientName !== undefined) existingAddresses[addressIndex].recipientName = sanitizeString(recipientName)
     if (city !== undefined) existingAddresses[addressIndex].city = sanitizeString(city)
+    if (location !== undefined) existingAddresses[addressIndex].location = sanitizeString(location)
+    if (deliveryCost !== undefined) existingAddresses[addressIndex].deliveryCost = Number(deliveryCost) || 3.0
     if (phone !== undefined) existingAddresses[addressIndex].phone = sanitizeString(phone)
     if (addressDetails !== undefined) existingAddresses[addressIndex].addressDetails = sanitizeString(addressDetails)
     if (typeof isDefault === 'boolean') {
@@ -466,6 +478,8 @@ export async function PUT(request: NextRequest) {
       name: sanitizeString(addr.name || ''),
       recipientName: sanitizeString(addr.recipientName || ''),
       city: sanitizeString(addr.city || ''),
+      location: sanitizeString(addr.location || ''),
+      deliveryCost: Number(addr.deliveryCost) || 3.0,
       phone: sanitizeString(addr.phone || ''),
       addressDetails: sanitizeString(addr.addressDetails || ''),
       isDefault: Boolean(addr.isDefault)
@@ -614,6 +628,8 @@ export async function DELETE(request: NextRequest) {
       name: sanitizeString(addr.name || ''),
       recipientName: sanitizeString(addr.recipientName || ''),
       city: sanitizeString(addr.city || ''),
+      location: sanitizeString(addr.location || ''),
+      deliveryCost: Number(addr.deliveryCost) || 3.0,
       phone: sanitizeString(addr.phone || ''),
       addressDetails: sanitizeString(addr.addressDetails || ''),
       isDefault: Boolean(addr.isDefault)

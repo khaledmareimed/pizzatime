@@ -59,6 +59,27 @@ export const UserSchema = {
       trim: true,
       maxlength: [50, 'City name cannot exceed 50 characters']
     },
+    cityId: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    location: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: [100, 'Location name cannot exceed 100 characters']
+    },
+    locationId: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    deliveryCost: {
+      type: Number,
+      required: true,
+      min: [0, 'Delivery cost cannot be negative']
+    },
     phone: {
       type: String,
       required: true,
@@ -104,6 +125,10 @@ export interface UserAddress {
   name: string
   recipientName: string
   city: string
+  cityId: string
+  location: string
+  locationId: string
+  deliveryCost: number
   phone: string
   addressDetails: string
   isDefault: boolean
@@ -135,6 +160,10 @@ export interface UserOrder {
     name: string
     recipientName: string
     city: string
+    cityId: string
+    location: string
+    locationId: string
+    deliveryCost: number
     phone: string
     addressDetails: string
   }

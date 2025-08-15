@@ -48,6 +48,21 @@ function validateAddressInput(data: any, isPartialUpdate: boolean = false): { is
     }
   }
   
+  if (!isPartialUpdate || data.location !== undefined) {
+    if (!data.location || typeof data.location !== 'string' || data.location.trim().length < 2) {
+      errors.push('Location name must be at least 2 characters')
+    }
+    if (data.location && data.location.length > 100) {
+      errors.push('Location name cannot exceed 100 characters')
+    }
+  }
+  
+  if (!isPartialUpdate || data.deliveryCost !== undefined) {
+    if (typeof data.deliveryCost !== 'number' || data.deliveryCost < 0) {
+      errors.push('Delivery cost must be a positive number')
+    }
+  }
+  
   if (!isPartialUpdate || data.phone !== undefined) {
     if (!data.phone || typeof data.phone !== 'string' || !validatePhoneNumber(data.phone.trim())) {
       errors.push('Valid phone number is required')
@@ -125,7 +140,10 @@ export async function GET(request: NextRequest) {
     const sanitizedAddresses = (user.addresses || []).map(addr => ({
       _id: addr._id,
       name: sanitizeString(addr.name || ''),
+      recipientName: sanitizeString(addr.recipientName || ''),
       city: sanitizeString(addr.city || ''),
+      location: sanitizeString(addr.location || ''),
+      deliveryCost: Number(addr.deliveryCost) || 3.0, // Default to 3.0 if missing
       phone: sanitizeString(addr.phone || ''),
       addressDetails: sanitizeString(addr.addressDetails || ''),
       isDefault: Boolean(addr.isDefault)
@@ -196,7 +214,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { name, recipientName, city, phone, addressDetails, isDefault } = body
+    const { name, recipientName, city, location, deliveryCost, phone, addressDetails, isDefault } = body
 
     // Get user collection
     const userCollection = await createCollection<User>('users', UserSchema, {
@@ -229,6 +247,8 @@ export async function POST(request: NextRequest) {
       name: sanitizeString(name),
       recipientName: sanitizeString(recipientName),
       city: sanitizeString(city),
+      location: sanitizeString(location),
+      deliveryCost: Number(deliveryCost) || 0,
       phone: sanitizeString(phone),
       addressDetails: sanitizeString(addressDetails),
       isDefault: Boolean(isDefault) || (user.addresses?.length === 0) // First address is default
@@ -406,7 +426,7 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    const { addressId, name, city, phone, addressDetails, isDefault } = body
+    const { addressId, name, recipientName, city, location, deliveryCost, phone, addressDetails, isDefault } = body
 
     // Validate addressId
     if (!addressId || typeof addressId !== 'string') {
@@ -426,7 +446,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Validate input data if provided (partial validation for updates)
-    const updateData = { name, city, phone, addressDetails, isDefault }
+    const updateData = { name, recipientName, city, location, deliveryCost, phone, addressDetails, isDefault }
     const validation = validateAddressInput(updateData, true) // true for partial update
     if (!validation.isValid) {
       return NextResponse.json(
@@ -474,7 +494,10 @@ export async function PUT(request: NextRequest) {
 
     // Update address with sanitized data
     if (name !== undefined) user.addresses[addressIndex].name = sanitizeString(name)
+    if (recipientName !== undefined) user.addresses[addressIndex].recipientName = sanitizeString(recipientName)
     if (city !== undefined) user.addresses[addressIndex].city = sanitizeString(city)
+    if (location !== undefined) user.addresses[addressIndex].location = sanitizeString(location)
+    if (deliveryCost !== undefined) user.addresses[addressIndex].deliveryCost = Number(deliveryCost) || 0
     if (phone !== undefined) user.addresses[addressIndex].phone = sanitizeString(phone)
     if (addressDetails !== undefined) user.addresses[addressIndex].addressDetails = sanitizeString(addressDetails)
     if (typeof isDefault === 'boolean') user.addresses[addressIndex].isDefault = isDefault

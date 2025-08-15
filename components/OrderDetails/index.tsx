@@ -15,6 +15,7 @@ interface OrderDetailsProps {
   items: OrderItem[];
   onUpdateQuantity: (itemId: string, newQuantity: number) => void;
   onRemoveItem: (itemId: string) => void;
+  deliveryFee?: number; // Allow custom delivery fee
   onCouponChange?: (coupon: {
     code: string;
     name: string;
@@ -28,7 +29,7 @@ interface OrderDetailsProps {
   }) => void;
 }
 
-export default function OrderDetails({ items, onUpdateQuantity, onRemoveItem, onCouponChange }: OrderDetailsProps) {
+export default function OrderDetails({ items, onUpdateQuantity, onRemoveItem, deliveryFee = 3.0, onCouponChange }: OrderDetailsProps) {
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<{ 
     code: string; 
@@ -52,7 +53,7 @@ export default function OrderDetails({ items, onUpdateQuantity, onRemoveItem, on
 
   const subtotal = items.reduce((sum, item) => sum + calculateItemTotal(item), 0);
   const couponDiscount = appliedCoupon ? appliedCoupon.discountAmount : 0;
-  const deliveryFee = 15; // Fixed delivery fee
+  // deliveryFee is now passed as prop with default value of 3.0 JOD
   const total = subtotal - couponDiscount + deliveryFee;
 
   // Notify parent component about coupon and totals changes
@@ -74,7 +75,7 @@ export default function OrderDetails({ items, onUpdateQuantity, onRemoveItem, on
 
       onCouponChange(couponData, totalsData);
     }
-  }, [appliedCoupon, subtotal, couponDiscount, total, onCouponChange]);
+  }, [appliedCoupon, subtotal, couponDiscount, deliveryFee, total, onCouponChange]);
 
   // Re-validate coupon when items change
   useEffect(() => {

@@ -34,6 +34,8 @@ export default function CheckoutPage() {
     deliveryFee: number;
     total: number;
   } | null>(null);
+  const [currentDeliveryFee, setCurrentDeliveryFee] = useState<number>(3.0);
+  const [loadingDeliveryFee, setLoadingDeliveryFee] = useState<boolean>(false);
   const { items: cartItems, updateQuantity, removeItem, clearCart } = useCartContext();
   const { data: session, status } = useSession();
   const toast = useToastContext();
@@ -83,10 +85,14 @@ export default function CheckoutPage() {
         const data = await response.json();
         setUserAddresses(data.data || []);
         
-        // Set default address as selected
+        // Set default address as selected and fetch its delivery cost
         const defaultAddress = data.data?.find((addr: UserAddress) => addr.isDefault);
         if (defaultAddress) {
           setSelectedAddressId(defaultAddress._id || null);
+          // Fetch delivery cost for default address
+          if (defaultAddress.cityId && defaultAddress.locationId) {
+            await fetchDeliveryCostById(defaultAddress.cityId, defaultAddress.locationId);
+          }
         }
       } else {
         console.error('Failed to fetch addresses:', response.status);
@@ -98,8 +104,55 @@ export default function CheckoutPage() {
     }
   };
 
-  const handleAddressSelect = (addressId: string) => {
+  const handleAddressSelect = async (addressId: string) => {
     setSelectedAddressId(addressId);
+    
+    // Get the selected address
+    const selectedAddress = userAddresses.find(addr => addr._id === addressId);
+    console.log('🏠 Selected address:', selectedAddress);
+    
+    if (selectedAddress && selectedAddress.cityId && selectedAddress.locationId) {
+      console.log(`📍 Fetching delivery cost for IDs: cityId="${selectedAddress.cityId}" locationId="${selectedAddress.locationId}"`);
+      await fetchDeliveryCostById(selectedAddress.cityId, selectedAddress.locationId);
+    } else {
+      console.warn('⚠️ Address missing city or location IDs:', {
+        cityId: selectedAddress?.cityId,
+        locationId: selectedAddress?.locationId,
+        city: selectedAddress?.city,
+        location: selectedAddress?.location
+      });
+      toast.warning('عنوان غير مكتمل', 'هذا العنوان لا يحتوي على معرفات المدينة والمنطقة');
+      setCurrentDeliveryFee(0);
+    }
+  };
+
+  const fetchDeliveryCostById = async (cityId: string, locationId: string) => {
+    setLoadingDeliveryFee(true);
+    const apiUrl = `/api/delivery-cost-by-id?cityId=${encodeURIComponent(cityId)}&locationId=${encodeURIComponent(locationId)}`;
+    console.log(`📡 Making API call: ${apiUrl}`);
+    
+    try {
+      const response = await fetch(apiUrl);
+      const result = await response.json();
+      
+      console.log(`📊 API Response:`, { status: response.status, result });
+      
+      if (response.ok && result.success) {
+        setCurrentDeliveryFee(result.deliveryCost);
+        console.log(`✅ Delivery cost found: ${result.deliveryCost} JOD for cityId=${cityId} locationId=${locationId}`);
+        toast.success(`تكلفة التوصيل: ${result.deliveryCost.toFixed(2)} د.أ`);
+      } else {
+        console.error(`❌ Delivery cost error: ${result.error} for cityId=${cityId} locationId=${locationId}`);
+        toast.error('خطأ في تكلفة التوصيل', result.error);
+        setCurrentDeliveryFee(0);
+      }
+    } catch (error) {
+      console.error('❌ Network error fetching delivery cost:', error);
+      toast.error('خطأ في الشبكة', 'تعذر الحصول على تكلفة التوصيل');
+      setCurrentDeliveryFee(0);
+    } finally {
+      setLoadingDeliveryFee(false);
+    }
   };
 
   const handleAddAddress = async (addressData: Omit<UserAddress, '_id'>) => {
@@ -199,6 +252,8 @@ export default function CheckoutPage() {
           name: selectedAddress.name,
           recipientName: selectedAddress.recipientName,
           city: selectedAddress.city,
+          location: selectedAddress.location || '',
+          deliveryCost: currentDeliveryFee,
           phone: selectedAddress.phone,
           addressDetails: selectedAddress.addressDetails
         },
@@ -327,9 +382,11 @@ export default function CheckoutPage() {
         >
           {orderItems.length > 0 ? (
             <OrderDetails 
+              key={`order-details-${selectedAddressId}-${currentDeliveryFee}`}
               items={orderItems}
               onUpdateQuantity={handleUpdateQuantity}
               onRemoveItem={handleRemoveItem}
+              deliveryFee={currentDeliveryFee}
               onCouponChange={handleCouponChange}
             />
           ) : (
@@ -487,15 +544,21 @@ export default function CheckoutPage() {
                                 </p>
                                 
                                 <p className={cn('text-sm mb-1', theme.text.secondary)}>
-                                  {address.city}
+                                  {address.city}{address.location ? ` - ${address.location}` : ''}
                                 </p>
                                 
                                 <p className={cn('text-sm mb-1', theme.text.secondary)}>
                                   {address.addressDetails}
                                 </p>
                                 
-                                <p className={cn('text-sm', theme.text.secondary)}>
+                                <p className={cn('text-sm mb-1', theme.text.secondary)}>
                                   {address.phone}
+                                </p>
+                                
+                                <p className={cn('text-sm font-medium', 'text-blue-600 dark:text-blue-400')}>
+                                  تكلفة التوصيل: {selectedAddressId === address._id ? (
+                                    loadingDeliveryFee ? 'جاري التحميل...' : `${currentDeliveryFee.toFixed(2)} د.أ`
+                                  ) : `${(address.deliveryCost || 3.0).toFixed(2)} د.أ`}
                                 </p>
                               </div>
                               

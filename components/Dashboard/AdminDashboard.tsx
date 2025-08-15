@@ -89,6 +89,13 @@ export default function AdminDashboard({ session }: AdminDashboardProps) {
       description: 'عرض جميع أنشطة النظام والمستخدمين',
       href: '/dash/logs',
       color: 'bg-gray-600'
+    },
+    {
+      icon: Settings,
+      title: 'إعدادات المطعم',
+      description: 'إدارة أوقات التوصيل، المناطق، والبانرات',
+      href: '/dash/settings',
+      color: 'bg-teal-500'
     }
   ]
 
