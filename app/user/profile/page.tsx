@@ -24,10 +24,12 @@ import {
 import { cn } from '../../../funcs/utils';
 import { theme, responsive } from '../../../funcs/responsive';
 import { User as UserType, UserAddress } from '../../../funcs/collections/user';
+import { useToastContext } from '../../../funcs/contexts/ToastContext';
 import Card from '../../../components/Card';
 import Button from '../../../components/Button';
 import AddressForm from '../../../components/AddressForm';
 import OrdersSection from '../../../components/OrdersSection';
+import ConfirmDialog from '../../../components/ConfirmDialog';
 
 interface UserProfile {
   name: string;
@@ -40,16 +42,24 @@ interface UserProfile {
 export default function ProfilePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const toast = useToastContext();
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [notifications, setNotifications] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [editingAddress, setEditingAddress] = useState<UserAddress | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [confirmDialogData, setConfirmDialogData] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  } | null>(null);
   
   // Real user data from database
   const [userData, setUserData] = useState<UserType | null>(null);
   const [userAddresses, setUserAddresses] = useState<UserAddress[]>([]);
+  const [deliveryAreas, setDeliveryAreas] = useState<any[]>([]);
   const [orderStats, setOrderStats] = useState({
     totalOrders: 0,
     totalFavorites: 0,
@@ -80,9 +90,35 @@ export default function ProfilePage() {
     return null;
   }
 
+  // Function to resolve actual location name from delivery areas
+  const resolveLocationName = (cityId: string, locationId: string, fallbackLocation: string): string => {
+    if (!cityId || !locationId || cityId === 'default-city-id' || locationId === 'default-location-id') {
+      return fallbackLocation === 'منطقة افتراضية' ? '' : fallbackLocation;
+    }
+
+    const city = deliveryAreas.find(area => area._id === cityId);
+    if (!city) {
+      return fallbackLocation === 'منطقة افتراضية' ? '' : fallbackLocation;
+    }
+
+    const location = city.locations?.find((loc: any) => loc._id === locationId);
+    if (!location) {
+      return fallbackLocation === 'منطقة افتراضية' ? '' : fallbackLocation;
+    }
+
+    return location.locationName || (fallbackLocation === 'منطقة افتراضية' ? '' : fallbackLocation);
+  };
+
   const fetchUserData = async () => {
     setIsLoading(true);
     try {
+      // Fetch delivery areas first
+      const areasResponse = await fetch('/api/public/delivery-areas');
+      if (areasResponse.ok) {
+        const areasData = await areasResponse.json();
+        setDeliveryAreas(areasData.data?.areas || []);
+      }
+
       // Fetch user profile
       const userResponse = await fetch('/api/users');
       if (userResponse.ok) {
@@ -147,14 +183,14 @@ export default function ProfilePage() {
       if (response.ok) {
         const data = await response.json();
         setUserAddresses(data.data);
-        alert('تم إضافة العنوان بنجاح!');
+        toast.success('تم إضافة العنوان بنجاح!');
       } else {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to add address');
       }
     } catch (error) {
       console.error('Error adding address:', error);
-      alert(`حدث خطأ في إضافة العنوان: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`);
+      toast.error('خطأ في إضافة العنوان', error instanceof Error ? error.message : 'خطأ غير معروف');
     }
   };
 
@@ -182,37 +218,45 @@ export default function ProfilePage() {
         const data = await response.json();
         setUserAddresses(data.data);
         setEditingAddress(null);
-        alert('تم تحديث العنوان بنجاح!');
+        toast.success('تم تحديث العنوان بنجاح!');
       } else {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to update address');
       }
     } catch (error) {
       console.error('Error updating address:', error);
-      alert(`حدث خطأ في تحديث العنوان: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`);
+      toast.error('خطأ في تحديث العنوان', error instanceof Error ? error.message : 'خطأ غير معروف');
     }
   };
 
   const handleDeleteAddress = async (addressId: string) => {
-    if (!confirm('هل أنت متأكد من حذف هذا العنوان؟')) return;
+    const deleteAddress = async () => {
+      try {
+        const response = await fetch(`/api/users/addresses-direct?id=${addressId}`, {
+          method: 'DELETE',
+        });
 
-    try {
-      const response = await fetch(`/api/users/addresses-direct?id=${addressId}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUserAddresses(data.data);
-        alert('تم حذف العنوان بنجاح!');
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete address');
+        if (response.ok) {
+          const data = await response.json();
+          setUserAddresses(data.data);
+          toast.success('تم حذف العنوان بنجاح!');
+        } else {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to delete address');
+        }
+      } catch (error) {
+        console.error('Error deleting address:', error);
+        toast.error('خطأ في حذف العنوان', error instanceof Error ? error.message : 'خطأ غير معروف');
       }
-    } catch (error) {
-      console.error('Error deleting address:', error);
-      alert(`حدث خطأ في حذف العنوان: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`);
-    }
+    };
+
+    // Show custom confirmation dialog
+    setConfirmDialogData({
+      title: 'حذف العنوان',
+      message: 'هل أنت متأكد من حذف هذا العنوان؟ لا يمكن التراجع عن هذا الإجراء.',
+      onConfirm: deleteAddress
+    });
+    setShowConfirmDialog(true);
   };
 
   const stats = [
@@ -441,7 +485,10 @@ export default function ProfilePage() {
                               </div>
                               
                               <p className={cn('text-sm mb-1', theme.text.secondary)}>
-                                {address.city}
+                                {(() => {
+                                  const resolvedLocation = resolveLocationName(address.cityId, address.locationId, address.location);
+                                  return `${address.city}${resolvedLocation && resolvedLocation.trim() ? ` - ${resolvedLocation}` : ''}`;
+                                })()}
                               </p>
                               
                               <p className={cn('text-sm mb-1', theme.text.secondary)}>
@@ -599,6 +646,21 @@ export default function ProfilePage() {
         onSave={editingAddress ? handleUpdateAddress : handleAddAddress}
         editingAddress={editingAddress}
         isSubmitting={isSubmitting}
+      />
+
+      {/* Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showConfirmDialog}
+        onClose={() => {
+          setShowConfirmDialog(false);
+          setConfirmDialogData(null);
+        }}
+        onConfirm={confirmDialogData?.onConfirm || (() => {})}
+        title={confirmDialogData?.title || ''}
+        message={confirmDialogData?.message || ''}
+        confirmText="حذف"
+        cancelText="إلغاء"
+        variant="danger"
       />
     </div>
   );

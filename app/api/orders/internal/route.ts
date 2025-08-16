@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '../../../../auth'
 import { createCollection, Order, OrderSchema, OrderIndexes } from '../../../../funcs/collections'
+import { checkDeliveryAvailability, getUserRoleFromSession, formatAvailabilityMessage } from '../../../../funcs/delivery-availability'
 
 /**
  * POST /api/orders/internal - Create internal restaurant order (POS)
@@ -24,6 +25,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Forbidden. Admin access required.' },
         { status: 403 }
+      )
+    }
+
+    // Check delivery availability (admins bypass time restrictions but still check maintenance mode)
+    const availabilityResult = await checkDeliveryAvailability(session.user.role)
+    
+    // For internal orders, we only block if in maintenance mode, not for time restrictions
+    if (!availabilityResult.isAvailable && availabilityResult.reason?.includes('صيانة')) {
+      return NextResponse.json(
+        { 
+          error: 'النظام في وضع الصيانة',
+          message: formatAvailabilityMessage(availabilityResult),
+          availabilityInfo: availabilityResult
+        },
+        { status: 503 }
       )
     }
 

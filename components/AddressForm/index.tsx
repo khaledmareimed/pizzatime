@@ -28,6 +28,7 @@ interface AddressFormProps {
   onSave: (address: Omit<UserAddress, '_id'>) => Promise<void>;
   editingAddress?: UserAddress | null;
   isSubmitting?: boolean;
+  hideDeliveryPrice?: boolean;
 }
 
 export default function AddressForm({
@@ -35,7 +36,8 @@ export default function AddressForm({
   onClose,
   onSave,
   editingAddress,
-  isSubmitting = false
+  isSubmitting = false,
+  hideDeliveryPrice = false
 }: AddressFormProps) {
   const [formData, setFormData] = useState<Omit<UserAddress, '_id'>>({
     name: '',
@@ -78,9 +80,20 @@ export default function AddressForm({
         isDefault: editingAddress.isDefault || false
       });
       
-      // Set selected city when editing
-      if (editingAddress.city && deliveryAreas.length > 0) {
-        const city = deliveryAreas.find(area => area.cityName === editingAddress.city);
+      // Set selected city when editing - try both cityId and cityName for compatibility
+      if (deliveryAreas.length > 0) {
+        let city = null;
+        
+        // First try to find by cityId (preferred method)
+        if (editingAddress.cityId) {
+          city = deliveryAreas.find(area => area._id === editingAddress.cityId);
+        }
+        
+        // Fallback: find by cityName if cityId doesn't work
+        if (!city && editingAddress.city) {
+          city = deliveryAreas.find(area => area.cityName === editingAddress.city);
+        }
+        
         setSelectedCity(city || null);
       }
     } else {
@@ -100,6 +113,45 @@ export default function AddressForm({
     }
     setErrors({}); // Clear errors when switching between add/edit
   }, [editingAddress, isOpen, deliveryAreas]);
+
+  // Update form cityId and locationId when selectedCity changes during editing
+  useEffect(() => {
+    if (editingAddress && selectedCity && deliveryAreas.length > 0) {
+      // Update cityId if it's different from the selected city
+      if (formData.cityId !== selectedCity._id) {
+        setFormData(prev => ({
+          ...prev,
+          cityId: selectedCity._id,
+          city: selectedCity.cityName
+        }));
+      }
+      
+      // Set the correct location if we have locationId or location name
+      if (editingAddress.locationId || editingAddress.location) {
+        let location = null;
+        
+        // First try to find by locationId (preferred method)
+        if (editingAddress.locationId) {
+          location = selectedCity.locations.find(loc => loc._id === editingAddress.locationId);
+        }
+        
+        // Fallback: find by location name if locationId doesn't work
+        if (!location && editingAddress.location) {
+          location = selectedCity.locations.find(loc => loc.locationName === editingAddress.location);
+        }
+        
+        // Update form data with correct location info
+        if (location) {
+          setFormData(prev => ({
+            ...prev,
+            locationId: location._id,
+            location: location.locationName,
+            deliveryCost: location.customerCost
+          }));
+        }
+      }
+    }
+  }, [selectedCity, editingAddress, deliveryAreas]);
 
   const loadDeliveryAreas = async () => {
     try {
@@ -452,17 +504,6 @@ export default function AddressForm({
                 )}
               </div>
 
-              {/* Delivery Cost Display */}
-              {formData.deliveryCost > 0 && (
-                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                    <span className={cn('text-sm font-medium', theme.text.primary)}>
-                      تكلفة التوصيل: {formatJordanCurrency(formData.deliveryCost)}
-                    </span>
-                  </div>
-                </div>
-              )}
 
               {/* Phone */}
               <div>

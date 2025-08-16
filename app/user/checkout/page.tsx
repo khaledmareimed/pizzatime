@@ -34,8 +34,7 @@ export default function CheckoutPage() {
     deliveryFee: number;
     total: number;
   } | null>(null);
-  const [currentDeliveryFee, setCurrentDeliveryFee] = useState<number>(3.0);
-  const [loadingDeliveryFee, setLoadingDeliveryFee] = useState<boolean>(false);
+  const [currentDeliveryFee, setCurrentDeliveryFee] = useState<number>(0);
   const { items: cartItems, updateQuantity, removeItem, clearCart } = useCartContext();
   const { data: session, status } = useSession();
   const toast = useToastContext();
@@ -70,37 +69,231 @@ export default function CheckoutPage() {
     }
   }, [session]);
 
+
   const fetchUserAddresses = async () => {
     setIsLoadingAddresses(true);
+    console.log('🔄 Fetching user addresses with real IDs...');
+    
     try {
-      // Try the direct API first (bypasses schema validation)
-      let response = await fetch('/api/users/addresses-direct');
+      // Step 1: Get delivery areas to know what real IDs look like
+      console.log('📍 Step 1: Getting delivery areas...');
+      const areasResponse = await fetch('/api/public/delivery-areas');
+      const areasData = await areasResponse.json();
+      
+      if (!areasData.success || !areasData.data.areas.length) {
+        console.error('❌ No delivery areas found!');
+        toast.error('خطأ', 'لا توجد مناطق توصيل متاحة');
+        return;
+      }
+      
+      console.log('✅ Found delivery areas:', areasData.data.areas.length);
+      const deliveryAreas = areasData.data.areas;
+      
+      // Step 2: Get user addresses from database
+      console.log('📋 Step 2: Getting user addresses...');
+      const response = await fetch('/api/users/addresses-direct');
       
       if (!response.ok) {
-        // Fallback to regular API
-        response = await fetch('/api/users/addresses');
+        console.error('❌ Failed to fetch addresses:', response.status);
+        return;
       }
       
-      if (response.ok) {
-        const data = await response.json();
-        setUserAddresses(data.data || []);
+      const data = await response.json();
+      if (!data.success || !data.data) {
+        console.error('❌ No address data received');
+        return;
+      }
+      
+      console.log('📦 Raw addresses from database:', data.data);
+      
+      // Debug: Check what's actually in the database
+      console.log('\n🔍 DETAILED DATABASE CONTENT ANALYSIS:');
+      data.data.forEach((addr: any, index: number) => {
+        console.log(`\n📋 Address ${index + 1}: "${addr.name}"`);
+        console.log(`   Raw city: "${addr.city}"`);
+        console.log(`   Raw location: "${addr.location}"`);
+        console.log(`   Raw cityId: "${addr.cityId}"`);
+        console.log(`   Raw locationId: "${addr.locationId}"`);
+        console.log(`   Location type: ${typeof addr.location}`);
+        console.log(`   Location length: ${addr.location?.length || 0}`);
+        console.log(`   Location includes 'default': ${addr.location?.toLowerCase().includes('default')}`);
+        console.log(`   Location includes 'افتراض': ${addr.location?.toLowerCase().includes('افتراض')}`);
+      });
+      
+      // Step 3: Process each address to assign correct unique IDs
+      const processedAddresses = await Promise.all(data.data.map(async (address: any, index: number) => {
+        console.log(`\n🏠 [${index + 1}] Processing address: "${address.name}"`);
+        console.log(`   📍 Address location: "${address.city}" - "${address.location}"`);
+        console.log(`   🔍 Current stored IDs: cityId="${address.cityId || 'EMPTY'}", locationId="${address.locationId || 'EMPTY'}"`);
         
-        // Set default address as selected and fetch its delivery cost
-        const defaultAddress = data.data?.find((addr: UserAddress) => addr.isDefault);
-        if (defaultAddress) {
-          setSelectedAddressId(defaultAddress._id || null);
-          // Fetch delivery cost for default address
-          if (defaultAddress.cityId && defaultAddress.locationId) {
-            await fetchDeliveryCostById(defaultAddress.cityId, defaultAddress.locationId);
+        // Always search for fresh IDs to ensure accuracy
+        let assignedCityId = '';
+        let assignedLocationId = '';
+        
+        // Step 1: Find the correct city
+        console.log(`   🔍 Searching for city: "${address.city}"`);
+        const matchingCity = deliveryAreas.find((area: any) => {
+          const cityMatch = area.cityName.toLowerCase().trim() === address.city.toLowerCase().trim();
+          console.log(`     City comparison: "${area.cityName}" === "${address.city}" → ${cityMatch}`);
+          return cityMatch;
+        });
+        
+        if (!matchingCity) {
+          console.log(`   ❌ City "${address.city}" not found in delivery areas`);
+          console.log(`   📋 Available cities:`, deliveryAreas.map((area: any) => area.cityName));
+          return {
+            ...address,
+            cityId: '',
+            locationId: ''
+          };
+        }
+        
+        assignedCityId = matchingCity._id;
+        console.log(`   ✅ City found: "${matchingCity.cityName}" → cityId: ${assignedCityId}`);
+        
+        // Step 2: Find the correct location within this city
+        console.log(`   🔍 Searching for location: "${address.location}" in city "${matchingCity.cityName}"`);
+        console.log(`   📋 Available locations in ${matchingCity.cityName}:`);
+        
+        matchingCity.locations.forEach((loc: any, locIndex: number) => {
+          console.log(`     ${locIndex + 1}. "${loc.locationName}" (ID: ${loc._id})`);
+        });
+        
+        // Clean and prepare location for matching
+        let locationToMatch = address.location;
+        
+        // Handle "default area" or corrupted location data
+        if (!locationToMatch || 
+            locationToMatch.toLowerCase().includes('default') || 
+            locationToMatch.toLowerCase().includes('افتراض') ||
+            locationToMatch.toLowerCase().includes('منطقة افتراضية')) {
+          
+          console.log(`   🔧 FIXING CORRUPTED LOCATION: "${locationToMatch}"`);
+          
+          // Try to use the first available location in this city as fallback
+          if (matchingCity.locations.length > 0) {
+            const firstLocation = matchingCity.locations[0];
+            assignedLocationId = firstLocation._id;
+            console.log(`   ✅ FIXED: Using first available location "${firstLocation.locationName}" → ID: ${assignedLocationId}`);
+            
+            // Update the address location name to the correct one
+            return {
+              ...address,
+              cityId: assignedCityId,
+              locationId: assignedLocationId,
+              location: firstLocation.locationName // Fix the location name too
+            };
+          } else {
+            console.log(`   ❌ No locations available in city "${matchingCity.cityName}"`);
+            return {
+              ...address,
+              cityId: assignedCityId,
+              locationId: ''
+            };
           }
         }
-      } else {
-        console.error('Failed to fetch addresses:', response.status);
+        
+        // Normal matching for clean location data
+        console.log(`   🔍 Address location to match: "${locationToMatch}" (length: ${locationToMatch.length})`);
+        console.log(`   🔍 Address location trimmed: "${locationToMatch.toLowerCase().trim()}"`);
+        
+        const matchingLocation = matchingCity.locations.find((loc: any) => {
+          const addressLoc = locationToMatch.toLowerCase().trim();
+          const dbLoc = loc.locationName.toLowerCase().trim();
+          const locationMatch = addressLoc === dbLoc;
+          
+          console.log(`     📍 Comparing DB: "${loc.locationName}" (${dbLoc}) === Address: "${locationToMatch}" (${addressLoc}) → ${locationMatch}`);
+          return locationMatch;
+        });
+        
+        if (!matchingLocation) {
+          console.log(`   ❌ NO EXACT MATCH: Location "${locationToMatch}" not found`);
+          console.log(`   🔧 TRYING FALLBACK: Using first available location`);
+          
+          if (matchingCity.locations.length > 0) {
+            const fallbackLocation = matchingCity.locations[0];
+            assignedLocationId = fallbackLocation._id;
+            console.log(`   ✅ FALLBACK: Using "${fallbackLocation.locationName}" → ID: ${assignedLocationId}`);
+            
+            return {
+              ...address,
+              cityId: assignedCityId,
+              locationId: assignedLocationId,
+              location: fallbackLocation.locationName // Update location name
+            };
+          } else {
+            return {
+              ...address,
+              cityId: assignedCityId,
+              locationId: ''
+            };
+          }
+        }
+        
+        assignedLocationId = matchingLocation._id;
+        console.log(`   ✅ PERFECT MATCH: "${matchingLocation.locationName}" → locationId: ${assignedLocationId}`);
+        
+        // Final result for this address
+        console.log(`   🎯 Final IDs for "${address.name}": cityId=${assignedCityId}, locationId=${assignedLocationId}`);
+        
+        return {
+          ...address,
+          cityId: assignedCityId,
+          locationId: assignedLocationId
+        };
+      }));
+      
+      console.log('\n🎯 Final processed addresses:', processedAddresses);
+      setUserAddresses(processedAddresses);
+      
+      // Set default address as selected and get its delivery price
+      const defaultAddress = processedAddresses.find((addr: UserAddress) => addr.isDefault);
+      if (defaultAddress) {
+        setSelectedAddressId(defaultAddress._id || null);
+        console.log('🏠 Default address selected:', defaultAddress.name);
+        
+        // Automatically get delivery price for default address
+        if (defaultAddress.cityId && defaultAddress.locationId) {
+          console.log('📡 Auto-loading delivery price for default address...');
+          await getDeliveryPrice(defaultAddress.cityId, defaultAddress.locationId, defaultAddress.name);
+        }
       }
+      
     } catch (error) {
-      console.error('Error fetching addresses:', error);
+      console.error('❌ Error in fetchUserAddresses:', error);
+      toast.error('خطأ', 'فشل في تحميل العناوين');
     } finally {
       setIsLoadingAddresses(false);
+    }
+  };
+
+
+  // Separate function to get delivery price
+  const getDeliveryPrice = async (cityId: string, locationId: string, addressName: string) => {
+    console.log(`📡 Getting delivery price for ${addressName}...`);
+    
+    try {
+      const response = await fetch(`/api/get-delivery-price?cityId=${cityId}&locationId=${locationId}`);
+      const result = await response.json();
+      
+      console.log('📊 Delivery price API response:', result);
+      
+      if (response.ok && result.success) {
+        setCurrentDeliveryFee(result.deliveryPrice);
+        console.log(`✅ Delivery price: ${result.deliveryPrice} JOD`);
+        toast.success(`تكلفة التوصيل: ${result.deliveryPrice.toFixed(2)} د.أ`);
+        return result.deliveryPrice;
+      } else {
+        console.error(`❌ Failed to get delivery price: ${result.error}`);
+        setCurrentDeliveryFee(0);
+        toast.error('خطأ في تكلفة التوصيل', result.error || 'فشل في الحصول على السعر');
+        return 0;
+      }
+    } catch (error) {
+      console.error('❌ Network error getting delivery price:', error);
+      setCurrentDeliveryFee(0);
+      toast.error('خطأ في الشبكة', 'تعذر الحصول على تكلفة التوصيل');
+      return 0;
     }
   };
 
@@ -110,71 +303,122 @@ export default function CheckoutPage() {
     // Get the selected address
     const selectedAddress = userAddresses.find(addr => addr._id === addressId);
     console.log('🏠 Selected address:', selectedAddress);
+    console.log('🔍 Address IDs:', {
+      cityId: selectedAddress?.cityId,
+      locationId: selectedAddress?.locationId
+    });
     
-    if (selectedAddress && selectedAddress.cityId && selectedAddress.locationId) {
-      console.log(`📍 Fetching delivery cost for IDs: cityId="${selectedAddress.cityId}" locationId="${selectedAddress.locationId}"`);
-      await fetchDeliveryCostById(selectedAddress.cityId, selectedAddress.locationId);
+    // Get delivery price using real IDs
+    if (selectedAddress?.cityId && selectedAddress?.locationId) {
+      await getDeliveryPrice(selectedAddress.cityId, selectedAddress.locationId, selectedAddress.name);
     } else {
-      console.warn('⚠️ Address missing city or location IDs:', {
-        cityId: selectedAddress?.cityId,
-        locationId: selectedAddress?.locationId,
-        city: selectedAddress?.city,
-        location: selectedAddress?.location
-      });
-      toast.warning('عنوان غير مكتمل', 'هذا العنوان لا يحتوي على معرفات المدينة والمنطقة');
+      console.log('❌ Address missing cityId or locationId');
       setCurrentDeliveryFee(0);
+      toast.warning('عنوان غير مكتمل', 'هذا العنوان لا يحتوي على معرفات صحيحة');
     }
   };
 
-  const fetchDeliveryCostById = async (cityId: string, locationId: string) => {
-    setLoadingDeliveryFee(true);
-    const apiUrl = `/api/delivery-cost-by-id?cityId=${encodeURIComponent(cityId)}&locationId=${encodeURIComponent(locationId)}`;
-    console.log(`📡 Making API call: ${apiUrl}`);
+  // Debug function to check address data quality
+  const debugAddressData = () => {
+    console.log('\n🔍 === ADDRESS DATA DEBUG ===');
+    console.log('📊 Current state:');
+    console.log('  - userAddresses.length:', userAddresses.length);
+    console.log('  - selectedAddressId:', selectedAddressId);
+    console.log('  - currentDeliveryFee:', currentDeliveryFee);
+    console.log('  - addressDeliveryCosts:', addressDeliveryCosts);
     
-    try {
-      const response = await fetch(apiUrl);
-      const result = await response.json();
+    console.log('\n📋 Address details:');
+    userAddresses.forEach((addr, index) => {
+      console.log(`  ${index + 1}. ${addr.name}:`);
+      console.log(`     _id: "${addr._id}"`);
+      console.log(`     city: "${addr.city}"`);
+      console.log(`     cityId: "${addr.cityId}"`);
+      console.log(`     location: "${addr.location}"`);
+      console.log(`     locationId: "${addr.locationId}"`);
+      console.log(`     deliveryCost: ${addr.deliveryCost}`);
+      console.log(`     isDefault: ${addr.isDefault}`);
       
-      console.log(`📊 API Response:`, { status: response.status, result });
+      // Check if IDs are valid
+      const hasValidIds = addr.cityId && addr.locationId && 
+                         addr.cityId.trim() !== '' && addr.locationId.trim() !== '' &&
+                         addr.cityId !== 'default-city-id' && addr.locationId !== 'default-location-id';
+      console.log(`     hasValidIds: ${hasValidIds}`);
       
-      if (response.ok && result.success) {
-        setCurrentDeliveryFee(result.deliveryCost);
-        console.log(`✅ Delivery cost found: ${result.deliveryCost} JOD for cityId=${cityId} locationId=${locationId}`);
-        toast.success(`تكلفة التوصيل: ${result.deliveryCost.toFixed(2)} د.أ`);
-      } else {
-        console.error(`❌ Delivery cost error: ${result.error} for cityId=${cityId} locationId=${locationId}`);
-        toast.error('خطأ في تكلفة التوصيل', result.error);
-        setCurrentDeliveryFee(0);
-      }
-    } catch (error) {
-      console.error('❌ Network error fetching delivery cost:', error);
-      toast.error('خطأ في الشبكة', 'تعذر الحصول على تكلفة التوصيل');
-      setCurrentDeliveryFee(0);
-    } finally {
-      setLoadingDeliveryFee(false);
-    }
+      // Check loaded cost
+      const loadedCost = addressDeliveryCosts[addr._id!];
+      console.log(`     loadedCost: ${loadedCost}`);
+    });
+    console.log('🔍 === END DEBUG ===\n');
   };
 
   const handleAddAddress = async (addressData: Omit<UserAddress, '_id'>) => {
     try {
+      console.log('🏠 Adding new address:', addressData);
+      
+      // Get delivery areas to find real IDs for the new address
+      const areasResponse = await fetch('/api/public/delivery-areas');
+      const areasData = await areasResponse.json();
+      
+      if (!areasData.success || !areasData.data.areas.length) {
+        toast.error('خطأ', 'لا توجد مناطق توصيل متاحة');
+        return;
+      }
+      
+      const deliveryAreas = areasData.data.areas;
+      
+      // Find real cityId and locationId for the new address
+      let finalCityId = addressData.cityId || '';
+      let finalLocationId = addressData.locationId || '';
+      
+      console.log(`🔍 Looking for real IDs for: ${addressData.city} - ${addressData.location}`);
+      
+      // Find matching city
+      const matchingCity = deliveryAreas.find((area: any) => 
+        area.cityName.toLowerCase().trim() === addressData.city.toLowerCase().trim()
+      );
+      
+      if (matchingCity) {
+        finalCityId = matchingCity._id;
+        console.log(`✅ Found cityId: ${finalCityId}`);
+        
+        // Find matching location
+        const matchingLocation = matchingCity.locations.find((loc: any) =>
+          loc.locationName.toLowerCase().trim() === addressData.location.toLowerCase().trim()
+        );
+        
+        if (matchingLocation) {
+          finalLocationId = matchingLocation._id;
+          console.log(`✅ Found locationId: ${finalLocationId}`);
+        } else {
+          console.log(`❌ No matching location found for "${addressData.location}"`);
+        }
+      } else {
+        console.log(`❌ No matching city found for "${addressData.city}"`);
+      }
+      
+      // Create address data with real IDs
+      const addressWithRealIds = {
+        ...addressData,
+        cityId: finalCityId,
+        locationId: finalLocationId
+      };
+      
+      console.log('💾 Saving address with real IDs:', addressWithRealIds);
+      
       // Use the direct API that bypasses schema validation
       const response = await fetch('/api/users/addresses-direct', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(addressData),
+        body: JSON.stringify(addressWithRealIds),
       });
 
       if (response.ok) {
-        const data = await response.json();
-        setUserAddresses(data.data);
+        console.log('✅ Address saved successfully, reloading addresses section...');
         
-        // Select the new address if it's the default or first address
-        const newAddress = data.data[data.data.length - 1];
-        if (addressData.isDefault || data.data.length === 1) {
-          setSelectedAddressId(newAddress._id);
-        }
+        // Reload the entire addresses section to get fresh data with real IDs
+        await fetchUserAddresses();
         
         toast.success('تم إضافة العنوان بنجاح!');
       } else {
@@ -233,6 +477,15 @@ export default function CheckoutPage() {
         setIsSubmitting(false);
         return;
       }
+
+      // Validate delivery price is loaded
+      if (!currentDeliveryFee || currentDeliveryFee <= 0) {
+        toast.error('تكلفة التوصيل مطلوبة', 'يرجى اختيار عنوان صحيح مع تكلفة توصيل محددة');
+        setIsSubmitting(false);
+        return;
+      }
+
+      console.log(`✅ Order validation passed - Delivery fee: ${currentDeliveryFee} JOD`);
 
       const orderData = {
         items: cartItems.map(item => ({
@@ -555,11 +808,6 @@ export default function CheckoutPage() {
                                   {address.phone}
                                 </p>
                                 
-                                <p className={cn('text-sm font-medium', 'text-blue-600 dark:text-blue-400')}>
-                                  تكلفة التوصيل: {selectedAddressId === address._id ? (
-                                    loadingDeliveryFee ? 'جاري التحميل...' : `${currentDeliveryFee.toFixed(2)} د.أ`
-                                  ) : `${(address.deliveryCost || 3.0).toFixed(2)} د.أ`}
-                                </p>
                               </div>
                               
                               <div className={cn(
@@ -580,13 +828,33 @@ export default function CheckoutPage() {
                   </Card>
 
 
-                  {/* Checkout Form - Only show if address is selected */}
-                  {selectedAddressId && (
+                  {/* Checkout Form - Only show if address is selected and has delivery price */}
+                  {selectedAddressId && currentDeliveryFee > 0 && (
                     <CheckoutForm 
                       onSubmit={handleFormSubmit}
                       isSubmitting={isSubmitting}
                       selectedAddress={userAddresses.find(addr => addr._id === selectedAddressId)}
                     />
+                  )}
+                  
+                  {/* Show message if address selected but no delivery price */}
+                  {selectedAddressId && currentDeliveryFee <= 0 && (
+                    <div className={cn(
+                      'p-6 rounded-2xl border-2 border-dashed border-orange-300 dark:border-orange-700',
+                      theme.background.card
+                    )}>
+                      <div className="text-center">
+                        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                          <span className="text-2xl">⏳</span>
+                        </div>
+                        <h3 className={cn('font-bold mb-2', theme.text.primary)}>
+                          جاري تحميل تكلفة التوصيل
+                        </h3>
+                        <p className={cn('text-sm', theme.text.secondary)}>
+                          يرجى انتظار تحميل تكلفة التوصيل للعنوان المحدد
+                        </p>
+                      </div>
+                    </div>
                   )}
                 </motion.div>
 

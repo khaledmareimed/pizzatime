@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Star, Plus, Loader } from 'lucide-react';
+import { useToastContext } from '../../../funcs/contexts/ToastContext';
 import { cn } from '../../../funcs/utils';
 import { theme, responsive, animations } from '../../../funcs/responsive';
 import { formatPrice } from '../../../funcs/utils';
@@ -17,6 +18,7 @@ import Button from '../../../components/Button';
 export default function MenuPage() {
   const router = useRouter();
   const { addItem } = useCartContext();
+  const toast = useToastContext();
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   
   // Fetch categories and products from database
@@ -42,7 +44,7 @@ export default function MenuPage() {
     addItem(item, 1, [], undefined);
     
     // Show success feedback
-    alert(`تم إضافة ${item.productName} إلى السلة!`);
+    toast.success(`تم إضافة ${item.productName} إلى السلة!`);
   };
 
   const handleViewDetails = (item: Product) => {

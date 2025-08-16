@@ -61,8 +61,9 @@ export const UserSchema = {
     },
     cityId: {
       type: String,
-      required: true,
-      trim: true
+      required: false, // Made optional to allow migration
+      trim: true,
+      default: ''
     },
     location: {
       type: String,
@@ -72,8 +73,9 @@ export const UserSchema = {
     },
     locationId: {
       type: String,
-      required: true,
-      trim: true
+      required: false, // Made optional to allow migration
+      trim: true,
+      default: ''
     },
     deliveryCost: {
       type: Number,

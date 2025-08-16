@@ -33,32 +33,55 @@ export async function ensureUserExists() {
         role: session.user.role || 'user',
         orders: [],
         favorites: [],
-        addresses: [], // Ensure this is an empty array with correct schema
+        addresses: [], // Empty array - no validation issues
         dateJoined: new Date(),
         lastLogin: new Date(),
         isActive: true
       })
       
-      // Validate the user before saving to catch schema issues early
-      const validationError = user.validateSync()
-      if (validationError) {
-        console.error('User validation error:', validationError)
-        // Continue anyway, but log the error
-      }
-      
       await user.save()
       console.log(`New user created: ${user.email}`)
     } else {
-      // Check if user has addresses without recipientName and migrate them
+      // Check if user has addresses that need migration for new schema fields
       if (user.addresses && user.addresses.length > 0) {
-        const needsMigration = user.addresses.some((addr: any) => !addr.recipientName)
+        let needsMigration = false
+        
+        user.addresses = user.addresses.map((addr: any) => {
+          const updatedAddr = { ...addr }
+          
+          // Add missing recipientName
+          if (!updatedAddr.recipientName) {
+            updatedAddr.recipientName = user?.name || 'مستلم غير محدد'
+            needsMigration = true
+          }
+          
+          // Add missing location fields with defaults
+          if (!updatedAddr.location) {
+            updatedAddr.location = 'منطقة افتراضية'
+            needsMigration = true
+          }
+          
+          // Clean up mock IDs and set to empty for migration
+          if (!updatedAddr.locationId || updatedAddr.locationId === 'default-location-id') {
+            updatedAddr.locationId = ''
+            needsMigration = true
+          }
+          
+          if (!updatedAddr.cityId || updatedAddr.cityId === 'default-city-id') {
+            updatedAddr.cityId = ''
+            needsMigration = true
+          }
+          
+          if (updatedAddr.deliveryCost === undefined || updatedAddr.deliveryCost === null) {
+            updatedAddr.deliveryCost = 3.0 // Default delivery cost
+            needsMigration = true
+          }
+          
+          return updatedAddr
+        })
         
         if (needsMigration) {
           console.log(`Migrating addresses for user: ${user.email}`)
-          user.addresses = user.addresses.map((addr: any) => ({
-            ...addr,
-            recipientName: addr.recipientName || user?.name || 'مستلم غير محدد'
-          }))
         }
       }
       

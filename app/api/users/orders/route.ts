@@ -4,6 +4,7 @@ import { createCollection, User, UserSchema, UserIndexes, Order, OrderSchema, Or
 import { calculateCartSummary } from '../../../../funcs/types/cart'
 import { ObjectId } from 'mongodb'
 import { sendNewOrderNotification } from '../../../../funcs/whatsapp'
+import { checkDeliveryAvailability, getUserRoleFromSession, formatAvailabilityMessage } from '../../../../funcs/delivery-availability'
 
 /**
  * GET /api/users/orders - Get user's order history
@@ -105,6 +106,28 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       )
     }
+
+    // Check delivery availability based on Jordan time and user role
+    console.log('🚀 Starting delivery availability check for order submission')
+    const userRole = await getUserRoleFromSession(session)
+    console.log('👤 User role retrieved:', userRole)
+    
+    const availabilityResult = await checkDeliveryAvailability(userRole)
+    console.log('📋 Availability result:', availabilityResult)
+    
+    if (!availabilityResult.isAvailable) {
+      console.log('❌ Order blocked - restaurant not available')
+      return NextResponse.json(
+        { 
+          error: 'المطعم غير متاح للطلبات حالياً',
+          message: formatAvailabilityMessage(availabilityResult),
+          availabilityInfo: availabilityResult
+        },
+        { status: 403 }
+      )
+    }
+    
+    console.log('✅ Availability check passed - proceeding with order creation')
 
     const body = await request.json()
     const { items, deliveryAddress, notes, paymentMethod = 'cash', deliveryMethod = 'delivery', coupon, totals } = body
