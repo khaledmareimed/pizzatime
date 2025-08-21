@@ -42,6 +42,9 @@ export const OrderSchema = {
     name: { type: String, required: true },
     recipientName: { type: String, required: true },
     city: { type: String, required: true },
+    cityId: { type: String, required: false, default: '' },
+    location: { type: String, required: false, default: '' },
+    locationId: { type: String, required: false, default: '' },
     phone: { type: String, required: true },
     addressDetails: { type: String, required: true }
   },
@@ -132,6 +135,9 @@ export interface Order extends BaseDocument {
     name: string
     recipientName: string
     city: string
+    cityId?: string
+    location?: string
+    locationId?: string
     phone: string
     addressDetails: string
   }

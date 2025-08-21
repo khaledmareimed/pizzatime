@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '../../../auth'
-import { createCollection, User, UserSchema, UserIndexes, Settings, SettingsSchema, SettingsIndexes } from '../../../funcs/collections'
+import { createCollection, UserSchema, UserIndexes } from '../../../funcs/collections'
+import type { User } from '../../../funcs/collections'
+import { SettingsSchema, SettingsIndexes } from '../../../funcs/collections/settings'
+import type { Settings } from '../../../funcs/collections/settings'
 
 /**
  * POST /api/fix-user-schema - Fix user schema issues for all users (admin) or current user

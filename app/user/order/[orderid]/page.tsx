@@ -3,11 +3,14 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { ArrowLeft, Package, MapPin, Clock, CreditCard, Tag } from 'lucide-react';
+import { ArrowLeft, Package, MapPin, Clock, CreditCard, Tag, X, AlertTriangle } from 'lucide-react';
 import { cn } from '../../../../funcs/utils';
 import { theme, responsive } from '../../../../funcs/responsive';
 import Card from '../../../../components/Card';
 import Button from '../../../../components/Button';
+import { motion, AnimatePresence } from 'framer-motion';
+import { getJordanTime } from '../../../../funcs/jordanLocale';
+import { useToastContext } from '../../../../funcs/contexts/ToastContext';
 
 interface OrderItem {
   productId: string;
@@ -67,9 +70,13 @@ export default function OrderDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { success, error: showError } = useToastContext();
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
 
   const orderId = params.orderid as string;
 
@@ -153,6 +160,94 @@ export default function OrderDetailsPage() {
         return 'ملغي';
       default:
         return status;
+    }
+  };
+
+  // Check if order can be cancelled (within 5 minutes and not already cancelled/delivered)
+  const canCancelOrder = () => {
+    if (!order) return false;
+    
+    const orderDate = new Date(order.orderDate);
+    const now = getJordanTime(); // Use Jordan time for consistency
+    const timeDifferenceMinutes = (now.getTime() - orderDate.getTime()) / (1000 * 60);
+    
+    return (
+      timeDifferenceMinutes <= 5 &&
+      order.status !== 'cancelled' &&
+      order.status !== 'delivered'
+    );
+  };
+
+  // Get remaining time for cancellation
+  const getRemainingCancelTime = () => {
+    if (!order) return 0;
+    
+    const orderDate = new Date(order.orderDate);
+    const now = getJordanTime(); // Use Jordan time for consistency
+    const timeDifferenceMinutes = (now.getTime() - orderDate.getTime()) / (1000 * 60);
+    
+    return Math.max(0, 5 - timeDifferenceMinutes);
+  };
+
+  // Handle order cancellation
+  const handleCancelOrder = async () => {
+    if (!order || !canCancelOrder()) return;
+
+    try {
+      setIsCancelling(true);
+      
+      console.log('Attempting to cancel order:', order.orderId);
+      console.log('Order object:', order);
+      console.log('Cancel reason:', cancelReason || 'طلب العميل');
+      
+      const requestBody = {
+        orderId: order.orderId,
+        reason: cancelReason || 'طلب العميل'
+      };
+      
+      console.log('Request body:', requestBody);
+      
+      const response = await fetch('/api/users/orders/cancel', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      console.log('Cancel response status:', response.status);
+      
+      const result = await response.json();
+      console.log('Cancel response data:', result);
+
+      if (response.ok && result.success) {
+        // Update local order state
+        setOrder(prev => prev ? { ...prev, status: 'cancelled' } : null);
+        setShowCancelDialog(false);
+        setCancelReason('');
+        
+        // Show success message
+        success('تم إلغاء الطلب بنجاح', 'تم إرسال إشعار للمطعم');
+        
+        // Optionally redirect to orders page
+        // router.push('/user/profile');
+      } else {
+        // Handle specific error messages
+        const errorMessage = result.error || 'فشل في إلغاء الطلب';
+        console.error('Cancel order failed:', errorMessage);
+        showError('فشل في إلغاء الطلب', errorMessage);
+      }
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      
+      // Handle network errors
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        showError('خطأ في الاتصال', 'يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى');
+      } else {
+        showError('خطأ غير متوقع', error instanceof Error ? error.message : 'خطأ غير متوقع في إلغاء الطلب');
+      }
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -249,19 +344,43 @@ export default function OrderDetailsPage() {
           <div className="lg:col-span-2 space-y-6">
             {/* Order Status */}
             <Card className="p-6">
-              <div className="flex items-center gap-4">
-                <Package className={cn('w-8 h-8', theme.text.primary)} />
-                <div>
-                  <h2 className={cn('font-bold text-lg', theme.text.primary)}>
-                    حالة الطلب
-                  </h2>
-                  <span className={cn(
-                    'inline-block px-4 py-2 rounded-full text-sm font-medium mt-2',
-                    getStatusColor(order.status)
-                  )}>
-                    {getStatusText(order.status)}
-                  </span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <Package className={cn('w-8 h-8', theme.text.primary)} />
+                  <div>
+                    <h2 className={cn('font-bold text-lg', theme.text.primary)}>
+                      حالة الطلب
+                    </h2>
+                    <span className={cn(
+                      'inline-block px-4 py-2 rounded-full text-sm font-medium mt-2',
+                      getStatusColor(order.status)
+                    )}>
+                      {getStatusText(order.status)}
+                    </span>
+                    
+                    {/* Cancellation timer */}
+                    {canCancelOrder() && (
+                      <div className="mt-2">
+                        <p className={cn('text-xs', theme.text.secondary)}>
+                          يمكن إلغاء الطلب خلال: {Math.ceil(getRemainingCancelTime())} دقيقة
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
+
+                {/* Cancel Button */}
+                {canCancelOrder() && (
+                  <Button
+                    onClick={() => setShowCancelDialog(true)}
+                    variant="outline"
+                    size="sm"
+                    className="text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-600 dark:hover:bg-red-900/20"
+                  >
+                    <X className="w-4 h-4 ml-2" />
+                    إلغاء الطلب
+                  </Button>
+                )}
               </div>
             </Card>
 
@@ -381,6 +500,9 @@ export default function OrderDetailsPage() {
                 <p><strong>الاسم:</strong> {order.deliveryAddress.name}</p>
                 <p><strong>المستلم:</strong> {order.deliveryAddress.recipientName}</p>
                 <p><strong>المدينة:</strong> {order.deliveryAddress.city}</p>
+                {(order.deliveryAddress as any)?.location && (
+                  <p><strong>المنطقة:</strong> {(order.deliveryAddress as any).location}</p>
+                )}
                 <p><strong>الهاتف:</strong> {order.deliveryAddress.phone}</p>
                 <p><strong>العنوان:</strong> {order.deliveryAddress.addressDetails}</p>
               </div>
@@ -473,6 +595,90 @@ export default function OrderDetailsPage() {
           </div>
         </div>
       </div>
+
+      {/* Cancellation Dialog */}
+      <AnimatePresence>
+        {showCancelDialog && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={() => setShowCancelDialog(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full mx-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <AlertTriangle className="w-6 h-6 text-red-500" />
+                <h3 className={cn('text-lg font-bold', theme.text.primary)}>
+                  تأكيد إلغاء الطلب
+                </h3>
+              </div>
+
+              <p className={cn('text-sm mb-4', theme.text.secondary)}>
+                هل أنت متأكد من رغبتك في إلغاء هذا الطلب؟ لا يمكن التراجع عن هذا الإجراء.
+              </p>
+
+              <div className="mb-4">
+                <label className={cn('block text-sm font-medium mb-2', theme.text.primary)}>
+                  سبب الإلغاء (اختياري)
+                </label>
+                <textarea
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  placeholder="اكتب سبب إلغاء الطلب..."
+                  className={cn(
+                    'w-full px-3 py-2 border rounded-xl resize-none',
+                    'focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
+                    theme.border.primary,
+                    theme.background.card,
+                    theme.text.primary
+                  )}
+                  rows={3}
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => setShowCancelDialog(false)}
+                  variant="outline"
+                  className="flex-1"
+                  disabled={isCancelling}
+                >
+                  تراجع
+                </Button>
+                <Button
+                  onClick={handleCancelOrder}
+                  variant="primary"
+                  className="flex-1 bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700"
+                  disabled={isCancelling}
+                >
+                  {isCancelling ? (
+                    <div className="flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      جاري الإلغاء...
+                    </div>
+                  ) : (
+                    <>
+                      <X className="w-4 h-4 ml-2" />
+                      إلغاء الطلب
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              <div className={cn('mt-3 text-xs text-center', theme.text.secondary)}>
+                سيتم إرسال إشعار للمطعم بإلغاء الطلب
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -16,7 +16,8 @@ import {
 } from 'lucide-react'
 import Button from '@/components/Button'
 import ImageUpload from './ImageUpload'
-import { ProductForm, Category, ProductOption } from './types'
+import MaterialSelector from './MaterialSelector'
+import { ProductForm, Category, ProductOption, MaterialUsed } from './types'
 
 interface ProductModalProps {
   show: boolean
@@ -51,7 +52,11 @@ export default function ProductModal({
   const addTopping = () => {
     setProductForm({
       ...productForm,
-      addonsAndToppings: [...productForm.addonsAndToppings, { toppingName: '', toppingPrice: 0 }]
+      addonsAndToppings: [...productForm.addonsAndToppings, { 
+        toppingName: '', 
+        toppingPrice: 0,
+        materialsUsed: []
+      }]
     })
   }
 
@@ -59,13 +64,22 @@ export default function ProductModal({
     const newToppings = productForm.addonsAndToppings.filter((_: any, i: number) => i !== index)
     setProductForm({
       ...productForm,
-      addonsAndToppings: newToppings.length > 0 ? newToppings : [{ toppingName: '', toppingPrice: 0 }]
+      addonsAndToppings: newToppings
     })
   }
 
   const updateTopping = (index: number, field: string, value: string | number) => {
     const newToppings = [...productForm.addonsAndToppings]
     newToppings[index] = { ...newToppings[index], [field]: value }
+    setProductForm({
+      ...productForm,
+      addonsAndToppings: newToppings
+    })
+  }
+
+  const updateToppingMaterials = (toppingIndex: number, materials: MaterialUsed[]) => {
+    const newToppings = [...productForm.addonsAndToppings]
+    newToppings[toppingIndex] = { ...newToppings[toppingIndex], materialsUsed: materials }
     setProductForm({
       ...productForm,
       addonsAndToppings: newToppings
@@ -103,7 +117,11 @@ export default function ProductModal({
 
   const addChoice = (optionIndex: number) => {
     const newOptions = [...productForm.productOptions]
-    newOptions[optionIndex].choices.push({ choiceName: '', choicePrice: 0 })
+    newOptions[optionIndex].choices.push({ 
+      choiceName: '', 
+      choicePrice: 0,
+      materialsUsed: []
+    })
     setProductForm({
       ...productForm,
       productOptions: newOptions
@@ -130,6 +148,26 @@ export default function ProductModal({
     setProductForm({
       ...productForm,
       productOptions: newOptions
+    })
+  }
+
+  const updateChoiceMaterials = (optionIndex: number, choiceIndex: number, materials: MaterialUsed[]) => {
+    const newOptions = [...productForm.productOptions]
+    newOptions[optionIndex].choices[choiceIndex] = {
+      ...newOptions[optionIndex].choices[choiceIndex],
+      materialsUsed: materials
+    }
+    setProductForm({
+      ...productForm,
+      productOptions: newOptions
+    })
+  }
+
+  // Materials handlers
+  const updateBaseMaterials = (materials: MaterialUsed[]) => {
+    setProductForm({
+      ...productForm,
+      materialsUsed: materials
     })
   }
 
@@ -378,39 +416,49 @@ export default function ProductModal({
                     </Button>
                   </div>
                   
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">الخيارات المتاحة:</h5>
                     {option.choices.map((choice: any, choiceIndex: number) => (
-                      <div key={choiceIndex} className="flex gap-3">
-                        <input
-                          type="text"
-                          value={choice.choiceName}
-                          onChange={(e) => updateChoice(optionIndex, choiceIndex, 'choiceName', e.target.value)}
-                          className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                          placeholder="اسم الخيار (مثل: دجاج)"
-                          disabled={loading}
-                        />
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={choice.choicePrice}
-                          onChange={(e) => updateChoice(optionIndex, choiceIndex, 'choicePrice', parseFloat(e.target.value) || 0)}
-                          className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                          placeholder="السعر الإضافي"
-                          min="0"
-                          disabled={loading}
-                        />
-                        {option.choices.length > 1 && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => removeChoice(optionIndex, choiceIndex)}
-                            className="text-red-600 hover:text-red-700 px-2"
+                      <div key={choiceIndex} className="p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800">
+                        <div className="flex gap-3 mb-3">
+                          <input
+                            type="text"
+                            value={choice.choiceName}
+                            onChange={(e) => updateChoice(optionIndex, choiceIndex, 'choiceName', e.target.value)}
+                            className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                            placeholder="اسم الخيار (مثل: دجاج)"
                             disabled={loading}
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        )}
+                          />
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={choice.choicePrice}
+                            onChange={(e) => updateChoice(optionIndex, choiceIndex, 'choicePrice', parseFloat(e.target.value) || 0)}
+                            className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                            placeholder="السعر الإضافي"
+                            min="0"
+                            disabled={loading}
+                          />
+                          {option.choices.length > 1 && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => removeChoice(optionIndex, choiceIndex)}
+                              className="text-red-600 hover:text-red-700 px-2"
+                              disabled={loading}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          )}
+                        </div>
+                        
+                        {/* Materials for this choice */}
+                        <MaterialSelector
+                          materials={choice.materialsUsed || []}
+                          onMaterialsChange={(materials) => updateChoiceMaterials(optionIndex, choiceIndex, materials)}
+                          title={`مواد الخيار: ${choice.choiceName || 'خيار جديد'}`}
+                          disabled={loading}
+                        />
                       </div>
                     ))}
                     <Button
@@ -439,6 +487,24 @@ export default function ProductModal({
             </div>
           </div>
 
+          {/* Base Product Materials Section */}
+          <div className="space-y-6">
+            <h4 className="flex items-center text-lg font-medium text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">
+              <Package className="w-5 h-5 mr-2" />
+              المواد المستخدمة في المنتج الأساسي
+            </h4>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              المواد الخام المستخدمة في تحضير المنتج الأساسي (بدون إضافات أو خيارات)
+            </p>
+            
+            <MaterialSelector
+              materials={productForm.materialsUsed}
+              onMaterialsChange={updateBaseMaterials}
+              title="مواد المنتج الأساسي"
+              disabled={loading}
+            />
+          </div>
+
           {/* Toppings Section */}
           <div className="space-y-6">
             <h4 className="flex items-center text-lg font-medium text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">
@@ -449,28 +515,28 @@ export default function ProductModal({
               إضافات اختيارية يمكن للعميل إضافتها للمنتج (مثل الجبن الإضافي، الفطر، إلخ)
             </p>
             
-            <div className="space-y-3">
+            <div className="space-y-6">
               {productForm.addonsAndToppings.map((topping: any, index: number) => (
-                <div key={index} className="flex gap-3">
-                  <input
-                    type="text"
-                    value={topping.toppingName}
-                    onChange={(e) => updateTopping(index, 'toppingName', e.target.value)}
-                    className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    placeholder="اسم الإضافة"
-                    disabled={loading}
-                  />
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={topping.toppingPrice}
-                    onChange={(e) => updateTopping(index, 'toppingPrice', parseFloat(e.target.value) || 0)}
-                    className="w-32 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    placeholder="السعر"
-                    min="0"
-                    disabled={loading}
-                  />
-                  {productForm.addonsAndToppings.length > 1 && (
+                <div key={index} className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700">
+                  <div className="flex gap-3 mb-4">
+                    <input
+                      type="text"
+                      value={topping.toppingName}
+                      onChange={(e) => updateTopping(index, 'toppingName', e.target.value)}
+                      className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      placeholder="اسم الإضافة"
+                      disabled={loading}
+                    />
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={topping.toppingPrice}
+                      onChange={(e) => updateTopping(index, 'toppingPrice', parseFloat(e.target.value) || 0)}
+                      className="w-32 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      placeholder="السعر"
+                      min="0"
+                      disabled={loading}
+                    />
                     <Button
                       variant="outline"
                       size="sm"
@@ -480,9 +546,18 @@ export default function ProductModal({
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
-                  )}
+                  </div>
+                  
+                  {/* Materials for this topping */}
+                  <MaterialSelector
+                    materials={topping.materialsUsed || []}
+                    onMaterialsChange={(materials) => updateToppingMaterials(index, materials)}
+                    title={`مواد الإضافة: ${topping.toppingName || 'إضافة جديدة'}`}
+                    disabled={loading}
+                  />
                 </div>
               ))}
+              
               <Button
                 variant="outline"
                 size="sm"
@@ -491,7 +566,7 @@ export default function ProductModal({
                 disabled={loading}
               >
                 <Plus className="w-4 h-4 mr-2" />
-                إضافة توبينج
+                إضافة توبينج جديد
               </Button>
             </div>
           </div>

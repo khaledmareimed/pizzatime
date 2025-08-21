@@ -65,7 +65,12 @@ export function formatJordanTime(dateString: string | Date, options?: Intl.DateT
 /**
  * Format currency in Jordanian Dinar
  */
-export function formatJordanCurrency(amount: number, options?: Intl.NumberFormatOptions): string {
+export function formatJordanCurrency(amount: number | undefined | null, options?: Intl.NumberFormatOptions): string {
+  // Handle undefined, null, or invalid values
+  if (amount === undefined || amount === null || isNaN(amount)) {
+    amount = 0
+  }
+  
   const defaultOptions: Intl.NumberFormatOptions = {
     style: 'currency',
     currency: 'JOD',
@@ -119,7 +124,23 @@ export function formatJordanTimeAgo(dateString: string | Date): string {
  * Get current Jordan time
  */
 export function getJordanTime(): Date {
-  return new Date(new Date().toLocaleString('en-US', { timeZone: JORDAN_TIMEZONE }))
+  // Create a new Date object that represents the current time in Jordan timezone
+  const now = new Date()
+  
+  // Get the time string in Jordan timezone and create a new Date from it
+  const jordanTimeString = now.toLocaleString('en-CA', { 
+    timeZone: JORDAN_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  })
+  
+  // Parse the Jordan time string to create a proper Date object
+  return new Date(jordanTimeString)
 }
 
 /**

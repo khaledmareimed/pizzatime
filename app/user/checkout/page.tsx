@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useSession, signIn } from 'next-auth/react';
 import { LogIn, MapPin, Plus } from 'lucide-react';
@@ -325,7 +325,7 @@ export default function CheckoutPage() {
     console.log('  - userAddresses.length:', userAddresses.length);
     console.log('  - selectedAddressId:', selectedAddressId);
     console.log('  - currentDeliveryFee:', currentDeliveryFee);
-    console.log('  - addressDeliveryCosts:', addressDeliveryCosts);
+    // addressDeliveryCosts removed - using deliveryCost from address object directly
     
     console.log('\n📋 Address details:');
     userAddresses.forEach((addr, index) => {
@@ -344,8 +344,8 @@ export default function CheckoutPage() {
                          addr.cityId !== 'default-city-id' && addr.locationId !== 'default-location-id';
       console.log(`     hasValidIds: ${hasValidIds}`);
       
-      // Check loaded cost
-      const loadedCost = addressDeliveryCosts[addr._id!];
+      // Check loaded cost (using deliveryCost from address object)
+      const loadedCost = addr.deliveryCost;
       console.log(`     loadedCost: ${loadedCost}`);
     });
     console.log('🔍 === END DEBUG ===\n');
@@ -440,7 +440,7 @@ export default function CheckoutPage() {
     removeItem(itemId);
   };
 
-  const handleCouponChange = (coupon: {
+  const handleCouponChange = useCallback((coupon: {
     code: string;
     name: string;
     discountAmount: number;
@@ -453,7 +453,7 @@ export default function CheckoutPage() {
   }) => {
     setAppliedCoupon(coupon);
     setOrderTotals(totals);
-  };
+  }, []);
 
 
   const handleFormSubmit = async (formData: any) => {
@@ -505,7 +505,9 @@ export default function CheckoutPage() {
           name: selectedAddress.name,
           recipientName: selectedAddress.recipientName,
           city: selectedAddress.city,
+          cityId: selectedAddress.cityId || '',
           location: selectedAddress.location || '',
+          locationId: selectedAddress.locationId || '',
           deliveryCost: currentDeliveryFee,
           phone: selectedAddress.phone,
           addressDetails: selectedAddress.addressDetails
@@ -532,6 +534,11 @@ export default function CheckoutPage() {
           }
         })
       };
+
+      // Debug order data being sent
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔍 Order data being sent:', JSON.stringify(orderData.deliveryAddress, null, 2));
+      }
 
       // Submit order to API
       const response = await fetch('/api/users/orders', {

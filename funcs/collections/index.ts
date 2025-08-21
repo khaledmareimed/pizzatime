@@ -27,6 +27,9 @@ export type { Financial } from './financial'
 export { SettingsSchema, SettingsIndexes, getDefaultSettings } from './settings'
 export type { Settings, DeliverySchedule, DeliveryArea, DeliveryLocation, Banner, RestaurantInfo, SystemSettings, DaySchedule } from './settings'
 
+export { RawMaterialSchema, RawMaterialIndexes } from './material'
+export type { RawMaterial, MaterialPurchase, MaterialUsage } from './material'
+
 // Re-export base interfaces and manager from main collections file
 export { 
   CollectionManager, 

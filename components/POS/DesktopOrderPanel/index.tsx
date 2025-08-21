@@ -7,7 +7,7 @@ import OrderCart from '../OrderCart'
 import EnhancedOrderSummary from '../EnhancedOrderSummary'
 import CouponInput from '../CouponInput'
 import ManualDiscount from '../ManualDiscount'
-import DeliveryOptions from '../DeliveryOptions'
+import DeliveryInfoSection, { CustomerInfo, DeliveryInfo } from '../DeliveryInfoSection'
 import Button from '@/components/Button'
 
 interface DesktopOrderPanelProps {
@@ -45,6 +45,10 @@ interface DesktopOrderPanelProps {
   deliveryMethod: 'pickup' | 'delivery'
   onDeliveryMethodChange: (method: 'pickup' | 'delivery') => void
   deliveryPrice: number
+  customerInfo: CustomerInfo
+  deliveryInfo?: DeliveryInfo
+  onCustomerInfoUpdate: (customerInfo: CustomerInfo) => void
+  onDeliveryInfoUpdate: (deliveryInfo: DeliveryInfo) => void
   isProcessingOrder?: boolean
 }
 
@@ -66,14 +70,14 @@ export default function DesktopOrderPanel({
   deliveryMethod,
   onDeliveryMethodChange,
   deliveryPrice,
+  customerInfo,
+  deliveryInfo,
+  onCustomerInfoUpdate,
+  onDeliveryInfoUpdate,
   isProcessingOrder = false
 }: DesktopOrderPanelProps) {
   const router = useRouter()
   const [customerData, setCustomerData] = React.useState({
-    name: '',
-    phone: '',
-    address: '',
-    city: '',
     paymentMethod: 'cash',
     notes: ''
   })
@@ -85,16 +89,7 @@ export default function DesktopOrderPanel({
     } else if (step === 'summary') {
       onStepChange('payment')
     } else if (step === 'payment') {
-      // Validate delivery address if delivery is selected
-      if (deliveryMethod === 'delivery' && !customerData.address.trim()) {
-        alert('يرجى إدخال عنوان التوصيل')
-        return
-      }
-      if (deliveryMethod === 'delivery' && !customerData.city.trim()) {
-        alert('يرجى إدخال المدينة')
-        return
-      }
-      
+      // Validation is now handled in the parent component (POSSystem)
       const finalCustomerData = {
         ...customerData,
         deliveryMethod
@@ -115,11 +110,14 @@ export default function DesktopOrderPanel({
   const canProceed = () => {
     if (step === 'cart') return items.length > 0
     if (step === 'summary') {
-      // Always require name and phone
-      if (!customerData.name.trim() || !customerData.phone.trim()) return false
-      // For delivery, also require address and city
-      if (deliveryMethod === 'delivery' && (!customerData.address.trim() || !customerData.city.trim())) return false
-      return true
+      // Customer info validation is now handled by DeliveryInfoSection
+      if (deliveryMethod === 'delivery') {
+        return customerInfo.name.trim() && customerInfo.phone.trim() && 
+               deliveryInfo?.city && deliveryInfo?.location
+      } else {
+        // For pickup, customer info is optional
+        return true
+      }
     }
     if (step === 'payment') return true
     return false
@@ -230,94 +228,30 @@ export default function DesktopOrderPanel({
         {step === 'summary' && (
           <div className="p-4 space-y-4">
             {/* Delivery Options */}
-            <DeliveryOptions
-              selectedOption={deliveryMethod}
-              onOptionChange={onDeliveryMethodChange}
-              deliveryPrice={deliveryPrice}
-              disabled={isProcessingOrder}
+            <DeliveryInfoSection
+              deliveryMethod={deliveryMethod}
+              customerInfo={customerInfo}
+              deliveryInfo={deliveryInfo}
+              onDeliveryMethodChange={onDeliveryMethodChange}
+              onCustomerInfoUpdate={onCustomerInfoUpdate}
+              onDeliveryInfoUpdate={onDeliveryInfoUpdate}
+              isEditable={!isProcessingOrder}
             />
 
 
-            {/* Customer Information */}
-            <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-4 space-y-4">
-              <h3 className="font-medium text-gray-900 dark:text-white">بيانات العميل</h3>
-              
-              {/* Always show name */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  اسم العميل *
-                </label>
-                <input
-                  type="text"
-                  value={customerData.name}
-                  onChange={(e) => setCustomerData({...customerData, name: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                  placeholder="أدخل اسم العميل"
-                  disabled={isProcessingOrder}
-                />
-              </div>
-
-              {/* Address field */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  العنوان {deliveryMethod === 'delivery' ? '*' : '(اختياري)'}
-                </label>
-                <input
-                  type="text"
-                  value={customerData.address}
-                  onChange={(e) => setCustomerData({...customerData, address: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                  placeholder={deliveryMethod === 'delivery' ? 'أدخل عنوان التوصيل' : 'أدخل العنوان (اختياري)'}
-                  disabled={isProcessingOrder}
-                />
-              </div>
-
-              {/* City field - only show for delivery */}
-              {deliveryMethod === 'delivery' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    المدينة *
-                  </label>
-                  <input
-                    type="text"
-                    value={customerData.city}
-                    onChange={(e) => setCustomerData({...customerData, city: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                    placeholder="أدخل المدينة"
-                    disabled={isProcessingOrder}
-                  />
-                </div>
-              )}
-
-              {/* Phone field - always required */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  رقم الهاتف *
-                </label>
-                <input
-                  type="tel"
-                  value={customerData.phone}
-                  onChange={(e) => setCustomerData({...customerData, phone: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                  placeholder="أدخل رقم الهاتف"
-                  disabled={isProcessingOrder}
-                />
-              </div>
-
-              {/* Always show optional comments */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  ملاحظات (اختياري)
-                </label>
-                <textarea
-                  value={customerData.notes}
-                  onChange={(e) => setCustomerData({...customerData, notes: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                  placeholder={deliveryMethod === 'pickup' ? 'أي ملاحظات خاصة بالطلب' : 'ملاحظات إضافية للتوصيل'}
-                  rows={2}
-                  disabled={isProcessingOrder}
-                />
-              </div>
+            {/* Order Notes */}
+            <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                ملاحظات الطلب (اختياري)
+              </label>
+              <textarea
+                value={customerData.notes}
+                onChange={(e) => setCustomerData({...customerData, notes: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white resize-none"
+                rows={3}
+                placeholder={deliveryMethod === 'pickup' ? 'أي ملاحظات خاصة بالطلب' : 'ملاحظات إضافية للتوصيل'}
+                disabled={isProcessingOrder}
+              />
             </div>
           </div>
         )}

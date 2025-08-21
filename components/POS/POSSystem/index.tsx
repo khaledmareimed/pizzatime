@@ -66,6 +66,29 @@ export default function POSSystem({ session }: POSSystemProps) {
   const [deliveryPrice] = useState(15) // Fixed delivery price - can be made configurable
   const [isProcessingOrder, setIsProcessingOrder] = useState(false)
   
+  // Customer and delivery info states
+  const [customerInfo, setCustomerInfo] = useState<{
+    name: string
+    phone: string
+    email?: string
+  }>({
+    name: '',
+    phone: '',
+    email: ''
+  })
+  
+  const [deliveryInfo, setDeliveryInfo] = useState<{
+    recipientName: string
+    city: string
+    cityId: string
+    location: string
+    locationId: string
+    deliveryCost: number
+    phone: string
+    addressDetails: string
+    isDefault: boolean
+  } | undefined>(undefined)
+  
   const { success, error } = useToastContext()
 
   // Load categories and products on mount
@@ -203,6 +226,48 @@ export default function POSSystem({ session }: POSSystemProps) {
     success('تم إزالة الخصم الإداري')
   }
 
+  const handleCustomerInfoUpdate = (newCustomerInfo: typeof customerInfo) => {
+    setCustomerInfo(newCustomerInfo)
+    
+    // Update delivery info recipient name and phone if delivery method is active
+    if (deliveryMethod === 'delivery' && deliveryInfo) {
+      setDeliveryInfo({
+        ...deliveryInfo,
+        recipientName: newCustomerInfo.name,
+        phone: newCustomerInfo.phone
+      })
+    }
+  }
+
+  const handleDeliveryInfoUpdate = (newDeliveryInfo: typeof deliveryInfo) => {
+    if (newDeliveryInfo) {
+      setDeliveryInfo(newDeliveryInfo)
+    }
+  }
+
+  const handleDeliveryMethodChange = (method: 'pickup' | 'delivery') => {
+    console.log('🔄 POS: Changing delivery method to:', method)
+    setDeliveryMethod(method)
+    
+    if (method === 'delivery' && !deliveryInfo) {
+      // Create default delivery info when switching to delivery
+      setDeliveryInfo({
+        recipientName: customerInfo.name,
+        city: '',
+        cityId: '',
+        location: '',
+        locationId: '',
+        deliveryCost: 0,
+        phone: customerInfo.phone,
+        addressDetails: '',
+        isDefault: false
+      })
+    } else if (method === 'pickup') {
+      // Clear delivery info when switching to pickup
+      setDeliveryInfo(undefined)
+    }
+  }
+
 
   const getFilteredProducts = () => {
     if (!selectedCategory) return products
@@ -306,22 +371,59 @@ export default function POSSystem({ session }: POSSystemProps) {
     try {
       setIsProcessingOrder(true)
 
+      // Validate required fields based on delivery method
+      if (deliveryMethod === 'delivery') {
+        if (!customerInfo.name || !customerInfo.phone) {
+          error('خطأ في البيانات', 'اسم العميل ورقم الهاتف مطلوبان للتوصيل')
+          setIsProcessingOrder(false)
+          return
+        }
+        
+        if (!deliveryInfo || !deliveryInfo.city || !deliveryInfo.location) {
+          error('خطأ في البيانات', 'يجب تحديد المدينة والمنطقة للتوصيل')
+          setIsProcessingOrder(false)
+          return
+        }
+      }
+
       // Calculate final totals
       const subtotal = cartSummary.total
       const couponDiscount = appliedCoupon?.discountAmount || 0
       const manualDiscount = appliedDiscount?.amount || 0
       const totalDiscount = couponDiscount + manualDiscount
-      const delivery = deliveryMethod === 'delivery' ? deliveryPrice : 0
+      const delivery = deliveryMethod === 'delivery' ? (deliveryInfo?.deliveryCost || 0) : 0
       const finalTotal = subtotal - totalDiscount + delivery
 
       const orderData = {
         orderId: generateOrderId(),
         items: cartItems,
+        customerInfo,
+        deliveryInfo: deliveryMethod === 'delivery' ? deliveryInfo : null,
         customer: {
-          ...customerData,
-          deliveryAddress: deliveryMethod === 'delivery' ? {
-            street: customerData.address,
-            city: customerData.city
+          name: customerInfo.name,
+          phone: customerInfo.phone,
+          email: customerInfo.email,
+          deliveryAddress: deliveryMethod === 'delivery' && deliveryInfo ? {
+            recipientName: deliveryInfo.recipientName,
+            city: deliveryInfo.city,
+            cityId: deliveryInfo.cityId,
+            location: deliveryInfo.location,
+            locationId: deliveryInfo.locationId,
+            phone: deliveryInfo.phone,
+            addressDetails: deliveryInfo.addressDetails,
+            deliveryCost: deliveryInfo.deliveryCost,
+            isPickup: false
+          } : deliveryMethod === 'pickup' ? {
+            type: 'pickup',
+            customerName: customerInfo.name,
+            customerPhone: customerInfo.phone,
+            recipientName: customerInfo.name,
+            name: customerInfo.name,
+            phone: customerInfo.phone,
+            deliveryCost: 0,
+            isPickup: true,
+            pickupLocation: 'store',
+            addressDetails: 'استلام من المحل - لا توجد رسوم توصيل'
           } : null
         },
         summary: {
@@ -334,9 +436,9 @@ export default function POSSystem({ session }: POSSystemProps) {
         },
         coupon: appliedCoupon,
         discount: appliedDiscount,
-        paymentMethod: customerData.paymentMethod || 'cash',
+        paymentMethod: customerData?.paymentMethod || 'cash',
         deliveryMethod,
-        notes: customerData.notes || '',
+        notes: customerData?.notes || '',
         isInternalOrder: true
       }
 
@@ -359,6 +461,8 @@ export default function POSSystem({ session }: POSSystemProps) {
         setAppliedCoupon(null)
         setAppliedDiscount(null)
         setDeliveryMethod('pickup')
+        setCustomerInfo({ name: '', phone: '', email: '' })
+        setDeliveryInfo(undefined)
         setShowCustomerForm(false)
         setDesktopStep('cart')
         setShowMobileCheckout(false)
@@ -472,8 +576,12 @@ export default function POSSystem({ session }: POSSystemProps) {
             onApplyDiscount={handleApplyDiscount}
             onRemoveDiscount={handleRemoveDiscount}
             deliveryMethod={deliveryMethod}
-            onDeliveryMethodChange={setDeliveryMethod}
+            onDeliveryMethodChange={handleDeliveryMethodChange}
             deliveryPrice={deliveryPrice}
+            customerInfo={customerInfo}
+            deliveryInfo={deliveryInfo}
+            onCustomerInfoUpdate={handleCustomerInfoUpdate}
+            onDeliveryInfoUpdate={handleDeliveryInfoUpdate}
             isProcessingOrder={isProcessingOrder}
           />
         </div>

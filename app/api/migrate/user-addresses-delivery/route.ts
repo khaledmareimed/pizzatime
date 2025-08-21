@@ -93,8 +93,8 @@ export async function POST(request: NextRequest) {
             
             return {
               ...address,
-              cityId: matchedCity._id.toString(),
-              locationId: matchedLocation._id.toString(),
+              cityId: matchedCity._id?.toString() || '',
+              locationId: matchedLocation._id?.toString() || '',
               deliveryCost: matchedLocation.customerCost || address.deliveryCost || 3.0
             }
           } else {

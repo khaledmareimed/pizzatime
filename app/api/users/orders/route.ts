@@ -132,6 +132,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { items, deliveryAddress, notes, paymentMethod = 'cash', deliveryMethod = 'delivery', coupon, totals } = body
 
+    // Debug delivery address in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 API received deliveryAddress:', JSON.stringify(deliveryAddress, null, 2))
+    }
+
     console.log('Order creation request:', {
       itemsCount: items?.length,
       coupon: coupon,
@@ -237,6 +242,15 @@ export async function POST(request: NextRequest) {
     // Generate unique order ID
     const orderId = `ORD-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 5)}`.toUpperCase()
 
+    // Debug delivery address structure being saved
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 Saving deliveryAddress with location:', {
+        city: deliveryAddress.city,
+        location: deliveryAddress.location,
+        hasLocationId: !!deliveryAddress.locationId
+      })
+    }
+
     // STEP 1: Save complete order data in user object's orders array
     const completeOrderData = {
       orderId,
@@ -264,6 +278,9 @@ export async function POST(request: NextRequest) {
         name: deliveryAddress.name,
         recipientName: deliveryAddress.recipientName,
         city: deliveryAddress.city,
+        cityId: deliveryAddress.cityId || '',
+        location: deliveryAddress.location || '',
+        locationId: deliveryAddress.locationId || '',
         phone: deliveryAddress.phone,
         addressDetails: deliveryAddress.addressDetails
       },

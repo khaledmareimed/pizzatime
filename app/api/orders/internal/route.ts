@@ -57,6 +57,11 @@ export async function POST(request: NextRequest) {
       isInternalOrder = true
     } = body
 
+    // Debug logging for delivery information
+    console.log('🚚 POS Order - Delivery Method:', deliveryMethod)
+    console.log('🏠 POS Order - Customer Object:', JSON.stringify(customer, null, 2))
+    console.log('📍 POS Order - Delivery Address:', JSON.stringify(customer.deliveryAddress, null, 2))
+
     // Validate required fields
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
@@ -101,10 +106,13 @@ export async function POST(request: NextRequest) {
     // Create delivery address according to schema
     const deliveryAddress = {
       name: customer.name,
-      recipientName: customer.name,
-      city: customer.city || 'N/A',
-      phone: customer.phone,
-      addressDetails: customer.address || (deliveryMethod === 'pickup' ? 'Pickup from restaurant' : 'N/A')
+      recipientName: customer.deliveryAddress?.recipientName || customer.name,
+      city: customer.deliveryAddress?.city || customer.city || (deliveryMethod === 'pickup' ? 'N/A' : ''),
+      cityId: customer.deliveryAddress?.cityId || customer.cityId || '',
+      location: customer.deliveryAddress?.location || customer.location || (deliveryMethod === 'pickup' ? 'N/A' : ''),
+      locationId: customer.deliveryAddress?.locationId || customer.locationId || '',
+      phone: customer.deliveryAddress?.phone || customer.phone,
+      addressDetails: customer.deliveryAddress?.addressDetails || customer.address || (deliveryMethod === 'pickup' ? 'Pickup from restaurant' : 'N/A')
     }
 
     // Create order summary according to schema
@@ -112,7 +120,7 @@ export async function POST(request: NextRequest) {
       subtotal: summary.total || 0,
       addonsTotal: summary.addonsTotal || 0,
       optionsTotal: summary.optionsTotal || 0,
-      deliveryFee: summary.deliveryFee || 0,
+      deliveryFee: summary.deliveryFee || customer.deliveryAddress?.deliveryCost || 0,
       couponDiscount: summary.couponDiscount || 0,
       manualDiscount: summary.manualDiscount || 0,
       total: summary.finalTotal

@@ -247,7 +247,9 @@ export async function POST(request: NextRequest) {
       name: sanitizeString(name),
       recipientName: sanitizeString(recipientName),
       city: sanitizeString(city),
+      cityId: '', // Default empty string for cityId
       location: sanitizeString(location),
+      locationId: '', // Default empty string for locationId
       deliveryCost: Number(deliveryCost) || 0,
       phone: sanitizeString(phone),
       addressDetails: sanitizeString(addressDetails),

@@ -134,10 +134,10 @@ export default function AdminDashboard({ session }: AdminDashboardProps) {
           </div>
           
           <div className="flex items-center space-x-2 rtl:space-x-reverse">
-            <Link href="/">
+            <Link href="/user">
               <Button variant="outline" size="sm">
                 <Home className="w-4 h-4 mr-2 rtl:ml-2" />
-                الرئيسية
+                مشاهده المتجر
               </Button>
             </Link>
             <Button 

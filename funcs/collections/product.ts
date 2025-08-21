@@ -36,6 +36,29 @@ export const ProductSchema = {
       message: 'Discount price must be less than or equal to regular price'
     }
   },
+  // Materials used in the base product
+  materialsUsed: [{
+    materialId: {
+      type: String,
+      required: true,
+      ref: 'RawMaterial'
+    },
+    materialName: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    quantity: {
+      type: Number,
+      required: true,
+      min: [0.001, 'Material quantity must be greater than 0']
+    },
+    unit: {
+      type: String,
+      required: true,
+      trim: true
+    }
+  }],
   addonsAndToppings: [{
     toppingName: {
       type: String,
@@ -48,7 +71,30 @@ export const ProductSchema = {
       type: Number,
       required: true,
       min: [0, 'Topping price cannot be negative']
-    }
+    },
+    // Materials used in this topping
+    materialsUsed: [{
+      materialId: {
+        type: String,
+        required: true,
+        ref: 'RawMaterial'
+      },
+      materialName: {
+        type: String,
+        required: true,
+        trim: true
+      },
+      quantity: {
+        type: Number,
+        required: true,
+        min: [0.001, 'Material quantity must be greater than 0']
+      },
+      unit: {
+        type: String,
+        required: true,
+        trim: true
+      }
+    }]
   }],
   productOptions: [{
     optionTitle: {
@@ -74,7 +120,30 @@ export const ProductSchema = {
         type: Number,
         default: 0,
         min: [0, 'Choice price cannot be negative']
-      }
+      },
+      // Materials used in this choice
+      materialsUsed: [{
+        materialId: {
+          type: String,
+          required: true,
+          ref: 'RawMaterial'
+        },
+        materialName: {
+          type: String,
+          required: true,
+          trim: true
+        },
+        quantity: {
+          type: Number,
+          required: true,
+          min: [0.001, 'Material quantity must be greater than 0']
+        },
+        unit: {
+          type: String,
+          required: true,
+          trim: true
+        }
+      }]
     }]
   }],
   description: {
@@ -104,12 +173,20 @@ export const ProductSchema = {
   }]
 }
 
+export interface MaterialUsed {
+  materialId: string
+  materialName: string
+  quantity: number
+  unit: string
+}
+
 export interface ProductOption {
   optionTitle: string
   isRequired: boolean
   choices: Array<{
     choiceName: string
     choicePrice: number
+    materialsUsed?: MaterialUsed[]
   }>
 }
 
@@ -118,9 +195,11 @@ export interface Product extends BaseDocument {
   categoryId: string
   productPrice: number
   productDiscountPrice?: number
+  materialsUsed?: MaterialUsed[]
   addonsAndToppings: Array<{
     toppingName: string
     toppingPrice: number
+    materialsUsed?: MaterialUsed[]
   }>
   productOptions: ProductOption[]
   description?: string

@@ -39,15 +39,13 @@ export async function checkDeliveryAvailability(userRole?: string): Promise<Deli
     // Get current Jordan time
     const now = getJordanTime()
     const currentTime = now.toLocaleTimeString('en-US', { 
-      hour12: false, 
-      timeZone: 'Asia/Amman',
+      hour12: false,
       hour: '2-digit',
       minute: '2-digit'
     })
     
     const currentDayName = now.toLocaleDateString('en-US', { 
-      weekday: 'long',
-      timeZone: 'Asia/Amman'
+      weekday: 'long'
     }).toLowerCase()
 
     console.log('⏰ Current Jordan time:', currentTime, 'Day:', currentDayName)
@@ -162,7 +160,7 @@ function isTimeWithinOperatingHours(currentTime: string, openTime: string, close
 /**
  * Get next opening time for the restaurant
  */
-function getNextOpeningTime(schedule: DeliverySchedule, currentTime: Date): { day: string, time: string } | null {
+function getNextOpeningTime(schedule: DeliverySchedule, currentTime: Date): { day: string, time: string } | undefined {
   const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const
   const dayNames = {
     sunday: 'الأحد',
@@ -190,7 +188,7 @@ function getNextOpeningTime(schedule: DeliverySchedule, currentTime: Date): { da
     }
   }
   
-  return null
+  return undefined
 }
 
 /**
@@ -212,10 +210,10 @@ export async function getUserRoleFromSession(session: any): Promise<string | und
     
     const user = await userCollection.model.findOne({ 
       email: session.user.email 
-    }).select('role')
+    }).select('role').lean()
     
-    console.log('User role found:', user?.role, 'for email:', session.user.email)
-    return user?.role
+    console.log('User role found:', (user as any)?.role, 'for email:', session.user.email)
+    return (user as any)?.role
   } catch (error) {
     console.error('Error getting user role:', error)
     return undefined

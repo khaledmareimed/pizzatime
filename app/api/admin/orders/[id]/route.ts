@@ -195,6 +195,7 @@ export async function GET(
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
+
     return NextResponse.json(order)
 
   } catch (error) {

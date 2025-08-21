@@ -30,12 +30,19 @@ export interface OfferItem {
   code?: string;
 }
 
-// Format price utility
+// Format price utility - Updated to use Jordanian Dinar
 export const formatPrice = (price: number): string => {
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('ar-JO', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'JOD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 3,
   }).format(price);
+};
+
+// Simple price format for display (د.أ = Jordanian Dinar symbol)
+export const formatSimplePrice = (price: number): string => {
+  return `${price.toFixed(2)} د.أ`;
 };
 
 // Generate star rating

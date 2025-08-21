@@ -5,19 +5,21 @@ import ImageBanner from '../../components/ImageBanner';
 import Offers from '../../components/Offers';
 import Products from '../../components/Products';
 import { useCartContext } from '../../funcs/contexts/CartContext';
+import { useToastContext } from '../../funcs/contexts/ToastContext';
 import type { OfferItem } from '../../funcs/utils';
 import type { Product } from '../../funcs/collections/product';
 
 export default function Home() {
   const router = useRouter();
   const { addItem } = useCartContext();
+  const { success } = useToastContext();
 
   const handleAddToCart = (item: Product) => {
     // Add item to real cart with localStorage persistence
     addItem(item, 1, [], undefined);
     
-    // Show success feedback (you could replace with a toast notification)
-    alert(`تم إضافة ${item.productName} إلى السلة!`);
+    // Show success feedback with custom toast
+    success('تم إضافة المنتج', `تم إضافة ${item.productName} إلى السلة بنجاح`);
   };
 
   const handleClaimOffer = (offer: OfferItem) => {

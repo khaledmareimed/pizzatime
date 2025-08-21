@@ -2,6 +2,11 @@
 
 import { useState } from 'react'
 import { DeliverySchedule, DaySchedule } from '@/funcs/collections/settings'
+import { motion } from 'framer-motion'
+import { cn } from '@/funcs/utils'
+import { theme, animations } from '@/funcs/responsive'
+import Button from '@/components/Button'
+import Card from '@/components/Card'
 import { formatJordanTime } from '@/funcs/jordanLocale'
 
 interface DeliveryScheduleSectionProps {
@@ -69,72 +74,80 @@ export default function DeliveryScheduleSection({
   }
 
   return (
-    <div className="p-6">
+    <motion.div {...animations.fadeIn} className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+          <h2 className={cn('text-xl font-semibold', theme.text.primary)}>
             أوقات التوصيل اليومية
           </h2>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
+          <p className={cn('mt-1', theme.text.secondary)}>
             إدارة أوقات عمل المطعم لكل يوم من أيام الأسبوع (توقيت الأردن)
           </p>
-          <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+          <p className={cn('text-sm mt-1', theme.text.accent)}>
             الوقت الحالي في الأردن: {getCurrentJordanTime()}
           </p>
         </div>
         
         {hasChanges && (
-          <div className="flex gap-2">
-            <button
+          <div className="flex gap-3">
+            <Button
               onClick={handleReset}
               disabled={saving}
-              className="px-4 py-2 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 font-medium flex items-center gap-2"
+              variant="outline"
+              size="sm"
             >
-              <span className="w-4 h-4 flex items-center justify-center">×</span>
+              <span className="w-4 h-4 flex items-center justify-center ml-2">×</span>
               إلغاء
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleSave}
               disabled={saving}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2 font-medium"
+              variant="primary"
+              size="sm"
             >
               {saving ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white ml-2"></div>
               ) : (
-                <span className="w-4 h-4 flex items-center justify-center bg-blue-500 rounded text-xs">✓</span>
+                <span className="w-4 h-4 flex items-center justify-center bg-blue-500 rounded text-xs ml-2">✓</span>
               )}
               حفظ التغييرات
-            </button>
+            </Button>
           </div>
         )}
       </div>
 
       {/* Quick Actions */}
-      <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-        <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
+      <Card className="mb-6 p-4">
+        <h3 className={cn('text-sm font-medium mb-3', theme.text.primary)}>
           إجراءات سريعة
         </h3>
         <div className="flex flex-wrap gap-2">
-          <button
+          <Button
             onClick={() => setAllDays({ isOpen: true })}
-            className="px-3 py-1 text-sm bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-md hover:bg-green-200 dark:hover:bg-green-800 transition-colors"
+            variant="secondary"
+            size="sm"
+            className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 hover:bg-green-200 dark:hover:bg-green-800/50"
           >
             فتح جميع الأيام
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => setAllDays({ isOpen: false })}
-            className="px-3 py-1 text-sm bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-md hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
+            variant="secondary"
+            size="sm"
+            className="bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-800/50"
           >
             إغلاق جميع الأيام
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => setAllDays({ openTime: '09:00', closeTime: '23:00' })}
-            className="px-3 py-1 text-sm bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+            variant="secondary"
+            size="sm"
+            className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-800/50"
           >
             توحيد الأوقات (9 ص - 11 م)
-          </button>
+          </Button>
         </div>
-      </div>
+      </Card>
 
       {/* Days Schedule */}
       <div className="space-y-4">
@@ -226,19 +239,19 @@ export default function DeliveryScheduleSection({
       </div>
 
       {/* Schedule Summary */}
-      <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+      <Card className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20">
         <h3 className="text-sm font-medium text-blue-900 dark:text-blue-200 mb-2">
           ملخص الجدول الأسبوعي
         </h3>
-        <div className="text-sm text-blue-800 dark:text-blue-300">
-          <p>
+        <div className="text-sm text-blue-800 dark:text-blue-300 grid grid-cols-2 gap-4">
+          <div>
             أيام العمل: {Object.values(localSchedule).filter(day => day.isOpen).length} من 7 أيام
-          </p>
-          <p>
+          </div>
+          <div>
             أيام الإغلاق: {Object.values(localSchedule).filter(day => !day.isOpen).length} من 7 أيام
-          </p>
+          </div>
         </div>
-      </div>
-    </div>
+      </Card>
+    </motion.div>
   )
 }

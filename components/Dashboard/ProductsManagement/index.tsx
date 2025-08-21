@@ -50,6 +50,7 @@ export default function ProductsManagement() {
     categoryId: '',
     productPrice: 0,
     productDiscountPrice: 0,
+    materialsUsed: [],
     description: '',
     available: true,
     visible: true,
@@ -275,11 +276,12 @@ export default function ProductsManagement() {
       categoryId: '',
       productPrice: 0,
       productDiscountPrice: 0,
+      materialsUsed: [],
       description: '',
       available: true,
       visible: true,
       imagesUrl: [],
-      addonsAndToppings: [{ toppingName: '', toppingPrice: 0 }],
+      addonsAndToppings: [{ toppingName: '', toppingPrice: 0, materialsUsed: [] }],
       productOptions: []
     })
   }
@@ -308,14 +310,24 @@ export default function ProductsManagement() {
         categoryId: product.categoryId,
         productPrice: product.productPrice,
         productDiscountPrice: product.productDiscountPrice || 0,
+        materialsUsed: product.materialsUsed || [],
         description: product.description || '',
         available: product.available,
         visible: product.visible,
         imagesUrl: product.imagesUrl || [],
         addonsAndToppings: product.addonsAndToppings.length > 0 
-          ? product.addonsAndToppings 
-          : [{ toppingName: '', toppingPrice: 0 }],
-        productOptions: product.productOptions || []
+          ? product.addonsAndToppings.map(topping => ({
+              ...topping,
+              materialsUsed: topping.materialsUsed || []
+            }))
+          : [{ toppingName: '', toppingPrice: 0, materialsUsed: [] }],
+        productOptions: (product.productOptions || []).map(option => ({
+          ...option,
+          choices: option.choices.map(choice => ({
+            ...choice,
+            materialsUsed: choice.materialsUsed || []
+          }))
+        }))
       })
     } else {
       setEditingProduct(null)

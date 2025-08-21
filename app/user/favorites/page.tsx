@@ -11,6 +11,7 @@ import { theme, responsive } from '../../../funcs/responsive';
 import { Product } from '../../../funcs/collections/product';
 import { useCartContext } from '../../../funcs/contexts/CartContext';
 import { useFavorites } from '../../../funcs/contexts/FavoritesContext';
+import { useToastContext } from '../../../funcs/contexts/ToastContext';
 import Card from '../../../components/Card';
 import Button from '../../../components/Button';
 
@@ -19,6 +20,7 @@ export default function FavoritesPage() {
   const router = useRouter();
   const { addItem } = useCartContext();
   const { favorites, isLoading, removeFromFavorites } = useFavorites();
+  const { success, error } = useToastContext();
   const [isRemoving, setIsRemoving] = useState<string | null>(null);
 
   // No need to fetch favorites manually - context handles it
@@ -28,15 +30,15 @@ export default function FavoritesPage() {
     
     setIsRemoving(productId);
     try {
-      const success = await removeFromFavorites(productId);
-      if (success) {
-        alert('تم إزالة المنتج من المفضلة!');
+      const removeSuccess = await removeFromFavorites(productId);
+      if (removeSuccess) {
+        success('تم إزالة المنتج', 'تم إزالة المنتج من المفضلة بنجاح');
       } else {
-        alert('حدث خطأ في إزالة المنتج من المفضلة');
+        error('فشل في الإزالة', 'حدث خطأ في إزالة المنتج من المفضلة');
       }
-    } catch (error) {
-      console.error('Error removing from favorites:', error);
-      alert('حدث خطأ في إزالة المنتج من المفضلة');
+    } catch (err) {
+      console.error('Error removing from favorites:', err);
+      error('خطأ في النظام', 'حدث خطأ في إزالة المنتج من المفضلة');
     } finally {
       setIsRemoving(null);
     }
@@ -47,7 +49,7 @@ export default function FavoritesPage() {
     addItem(item, 1, [], undefined);
     
     // Show success feedback
-    alert(`تم إضافة ${item.productName} إلى السلة!`);
+    success('تم إضافة المنتج', `تم إضافة ${item.productName} إلى السلة بنجاح`);
   };
 
   const handleViewDetails = (item: Product) => {

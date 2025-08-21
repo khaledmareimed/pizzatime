@@ -8,12 +8,33 @@ export interface Category {
   color?: string
 }
 
+export interface MaterialUsed {
+  materialId: string
+  materialName: string
+  quantity: number
+  unit: string
+}
+
+export interface RawMaterial {
+  _id: string
+  name: string
+  description?: string
+  category: string
+  unit: string
+  currentStock: number
+  minimumStock: number
+  maximumStock?: number
+  averageCost: number
+  status: 'active' | 'inactive' | 'discontinued'
+}
+
 export interface ProductOption {
   optionTitle: string
   isRequired: boolean
   choices: Array<{
     choiceName: string
     choicePrice: number
+    materialsUsed?: MaterialUsed[]
   }>
 }
 
@@ -23,12 +44,32 @@ export interface Product {
   categoryId: string
   productPrice: number
   productDiscountPrice?: number
+  materialsUsed?: MaterialUsed[]
   addonsAndToppings: Array<{
     toppingName: string
     toppingPrice: number
+    materialsUsed?: MaterialUsed[]
   }>
   productOptions: ProductOption[]
   description?: string
+  available: boolean
+  visible: boolean
+  imagesUrl: string[]
+}
+
+export interface ProductForm {
+  productName: string
+  categoryId: string
+  productPrice: number
+  productDiscountPrice: number
+  materialsUsed: MaterialUsed[]
+  addonsAndToppings: Array<{
+    toppingName: string
+    toppingPrice: number
+    materialsUsed?: MaterialUsed[]
+  }>
+  productOptions: ProductOption[]
+  description: string
   available: boolean
   visible: boolean
   imagesUrl: string[]
@@ -41,22 +82,6 @@ export interface CategoryForm {
   description: string
   displayOrder: number
   color: string
-}
-
-export interface ProductForm {
-  productName: string
-  categoryId: string
-  productPrice: number
-  productDiscountPrice: number
-  description: string
-  available: boolean
-  visible: boolean
-  imagesUrl: string[]
-  addonsAndToppings: Array<{
-    toppingName: string
-    toppingPrice: number
-  }>
-  productOptions: ProductOption[]
 }
 
 export interface DeleteConfirmData {

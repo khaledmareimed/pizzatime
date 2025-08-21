@@ -266,6 +266,9 @@ export default function POSOrdersPage() {
                       <p>الاسم: {order.deliveryAddress.recipientName}</p>
                       <p>الهاتف: {order.deliveryAddress.phone}</p>
                       <p>المدينة: {order.deliveryAddress.city}</p>
+                      {(order.deliveryAddress as any)?.location && (
+                        <p>المنطقة: {(order.deliveryAddress as any).location}</p>
+                      )}
                       <p>العنوان: {order.deliveryAddress.addressDetails}</p>
                       <p>طريقة التسليم: {order.deliveryMethod === 'pickup' ? 'استلام' : 'توصيل'}</p>
                     </div>

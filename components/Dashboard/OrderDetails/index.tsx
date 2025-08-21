@@ -25,7 +25,9 @@ import Link from 'next/link'
 import { cn } from '@/funcs/utils'
 import { theme, responsive, animations } from '@/funcs/responsive'
 import { formatJordanDateTime, formatJordanCurrency } from '@/funcs/jordanLocale'
+import { useToastContext } from '@/funcs/contexts/ToastContext'
 import Button from '@/components/Button'
+import OrderEditor from '../OrderEditor'
 
 interface OrderItem {
   productId: string
@@ -143,28 +145,55 @@ export default function AdminOrderDetails({ session, userId, orderId }: AdminOrd
   const [newStatus, setNewStatus] = useState('')
   const [newPaymentStatus, setNewPaymentStatus] = useState('')
   const [notes, setNotes] = useState('')
+  const [isEditMode, setIsEditMode] = useState(false)
+  const { success, error: showError } = useToastContext()
 
   const fetchOrder = async () => {
     try {
       setLoading(true)
-      // First try to get the order by orderId from the admin orders endpoint
-      const response = await fetch(`/api/admin/orders?search=${orderId}&limit=1`)
       
-      if (!response.ok) {
+      // Check if orderId looks like a MongoDB ObjectId (24 hex characters)
+      const isMongoId = /^[0-9a-fA-F]{24}$/.test(orderId)
+      
+      if (isMongoId) {
+        // Try to get the order by MongoDB _id directly
+        const directResponse = await fetch(`/api/admin/orders/${orderId}`)
+        
+        if (directResponse.ok) {
+          const orderData = await directResponse.json()
+          setOrder(orderData)
+          setNewStatus(orderData.status)
+          setNewPaymentStatus(orderData.paymentStatus)
+          setNotes(orderData.notes || '')
+          setError(null)
+          return
+        }
+      }
+      
+      // Search by custom orderId using the search endpoint
+      const searchResponse = await fetch(`/api/admin/orders?search=${encodeURIComponent(orderId)}&limit=1&dateRange=all`)
+      
+      if (!searchResponse.ok) {
         throw new Error('Failed to fetch order')
       }
 
-      const data = await response.json()
-      if (data.orders && data.orders.length > 0) {
-        const orderData = data.orders[0]
+      const searchData = await searchResponse.json()
+      console.log('Search response:', searchData) // Debug log
+      
+      if (searchData.orders && searchData.orders.length > 0) {
+        const orderData = searchData.orders[0]
         setOrder(orderData)
         setNewStatus(orderData.status)
         setNewPaymentStatus(orderData.paymentStatus)
         setNotes(orderData.notes || '')
+        setError(null)
       } else {
+        // Log the search data to understand why no orders were found
+        console.log('No orders found in search. Search data:', searchData)
+        console.log('Searching for orderId:', orderId)
+        console.log('Total orders in response:', searchData.stats?.total || 0)
         throw new Error('Order not found')
       }
-      setError(null)
     } catch (err) {
       console.error('Error fetching order:', err)
       setError('فشل في تحميل تفاصيل الطلب')
@@ -176,6 +205,36 @@ export default function AdminOrderDetails({ session, userId, orderId }: AdminOrd
   useEffect(() => {
     fetchOrder()
   }, [orderId])
+
+  // Handle order update from editor
+  const handleOrderUpdate = async (updatedOrder: any): Promise<boolean> => {
+    try {
+      const response = await fetch(`/api/admin/orders/${orderId}/edit`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedOrder),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        // Update local order state
+        setOrder(prev => prev ? { ...prev, ...updatedOrder } : null)
+        setIsEditMode(false)
+        success('تم الحفظ', 'تم تحديث الطلب بنجاح')
+        return true
+      } else {
+        showError('خطأ', data.error || 'فشل في تحديث الطلب')
+        return false
+      }
+    } catch (error) {
+      console.error('Error updating order:', error)
+      showError('خطأ', 'حدث خطأ أثناء تحديث الطلب')
+      return false
+    }
+  }
 
   const updateOrderStatus = async () => {
     if (!order) return
@@ -256,6 +315,19 @@ export default function AdminOrderDetails({ session, userId, orderId }: AdminOrd
     )
   }
 
+  // Show OrderEditor if in edit mode
+  if (isEditMode && order) {
+    return (
+      <div className={cn(responsive.container.xl, 'px-4 py-8')}>
+        <OrderEditor
+          order={order}
+          onSave={handleOrderUpdate}
+          onCancel={() => setIsEditMode(false)}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className={cn(responsive.container.xl, 'px-4 py-8')}>
       {/* Header */}
@@ -292,6 +364,14 @@ export default function AdminOrderDetails({ session, userId, orderId }: AdminOrd
           </div>
           
           <div className="flex items-center space-x-2 rtl:space-x-reverse">
+            <Button
+              onClick={() => setIsEditMode(true)}
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Edit className="w-4 h-4" />
+              تعديل الطلب
+            </Button>
             <span className={cn('px-3 py-1 rounded-lg text-sm font-medium text-white', getStatusColor(order.status))}>
               {statusTranslations[order.status]}
             </span>
@@ -353,53 +433,130 @@ export default function AdminOrderDetails({ session, userId, orderId }: AdminOrd
             </div>
           </motion.div>
 
-          {/* Delivery Address */}
-          <motion.div
-            {...animations.slideIn}
-            transition={{ delay: 0.1 }}
-            className="bg-white dark:bg-gray-800 rounded-3xl shadow-lg p-6"
-          >
-            <h2 className={cn('text-xl font-bold mb-6 text-gray-900 dark:text-white', theme.text.primary)}>
-              عنوان التوصيل
-            </h2>
-            <div className="space-y-4">
-              <div className="flex items-center space-x-3 rtl:space-x-reverse">
-                <User className="w-5 h-5 text-gray-400" />
-                <div>
-                  <p className={cn('font-medium text-gray-900 dark:text-white', theme.text.primary)}>
-                    {order.deliveryAddress.recipientName}
-                  </p>
-                  <p className={cn('text-sm text-gray-600 dark:text-gray-400', theme.text.secondary)}>
-                    المستلم
-                  </p>
+          {/* Delivery Address - Only show for delivery orders */}
+          {order.deliveryMethod === 'delivery' && order.deliveryAddress ? (
+            <motion.div
+              {...animations.slideIn}
+              transition={{ delay: 0.1 }}
+              className="bg-white dark:bg-gray-800 rounded-3xl shadow-lg p-6"
+            >
+              <h2 className={cn('text-xl font-bold mb-6 text-gray-900 dark:text-white', theme.text.primary)}>
+                عنوان التوصيل
+              </h2>
+              <div className="space-y-4">
+                <div className="flex items-center space-x-3 rtl:space-x-reverse">
+                  <User className="w-5 h-5 text-gray-400" />
+                  <div>
+                    <p className={cn('font-medium text-gray-900 dark:text-white', theme.text.primary)}>
+                      {order.deliveryAddress.recipientName}
+                    </p>
+                    <p className={cn('text-sm text-gray-600 dark:text-gray-400', theme.text.secondary)}>
+                      المستلم
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-3 rtl:space-x-reverse">
+                  <Phone className="w-5 h-5 text-gray-400" />
+                  <div>
+                    <p className={cn('font-medium text-gray-900 dark:text-white', theme.text.primary)}>
+                      {order.deliveryAddress.phone}
+                    </p>
+                    <p className={cn('text-sm text-gray-600 dark:text-gray-400', theme.text.secondary)}>
+                      رقم الهاتف
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-3 rtl:space-x-reverse">
+                  <MapPin className="w-5 h-5 text-gray-400 mt-1" />
+                  <div>
+                    <p className={cn('font-medium text-gray-900 dark:text-white', theme.text.primary)}>
+                      {order.deliveryAddress.city}
+                    </p>
+                    {/* Show city as location */}
+                    {order.deliveryAddress.city ? (
+                      <p className={cn('text-sm text-gray-600 dark:text-gray-400', theme.text.secondary)}>
+                        المدينة: {order.deliveryAddress.city}
+                      </p>
+                    ) : (
+                      <p className={cn('text-sm text-orange-600 dark:text-orange-400', theme.text.secondary)}>
+                        المدينة: غير محدد (يمكن تحديثها من خلال تعديل الطلب)
+                      </p>
+                    )}
+                    <p className={cn('text-sm text-gray-600 dark:text-gray-400', theme.text.secondary)}>
+                      {order.deliveryAddress.addressDetails}
+                    </p>
+                  </div>
                 </div>
               </div>
+            </motion.div>
+          ) : order.deliveryMethod === 'pickup' ? (
+            /* Pickup Information Card */
+            <motion.div
+              {...animations.slideIn}
+              transition={{ delay: 0.1 }}
+              className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-3xl shadow-lg p-6"
+            >
+              <h2 className={cn('text-xl font-bold mb-6 text-green-800 dark:text-green-200', theme.text.primary)}>
+                استلام من المحل
+              </h2>
               
-              <div className="flex items-center space-x-3 rtl:space-x-reverse">
-                <Phone className="w-5 h-5 text-gray-400" />
-                <div>
-                  <p className={cn('font-medium text-gray-900 dark:text-white', theme.text.primary)}>
-                    {order.deliveryAddress.phone}
+              {/* Customer Information for Pickup */}
+              <div className="space-y-4 mb-6">
+                {/* Customer Name - For pickup orders, use available name fields */}
+                {(() => {
+                  const customerName = order.deliveryAddress?.recipientName || order.deliveryAddress?.name
+                  
+                  return customerName && (
+                    <div className="flex items-center space-x-3 rtl:space-x-reverse">
+                      <User className="w-5 h-5 text-green-600" />
+                      <div>
+                        <p className={cn('font-medium text-green-800 dark:text-green-200', theme.text.primary)}>
+                          {customerName}
+                        </p>
+                        <p className={cn('text-sm text-green-600 dark:text-green-400', theme.text.secondary)}>
+                          اسم العميل
+                        </p>
+                      </div>
+                    </div>
+                  )
+                })()}
+                
+                {/* Customer Phone - For pickup orders, use available phone fields */}
+                {(() => {
+                  const customerPhone = order.deliveryAddress?.phone
+                  
+                  return customerPhone && (
+                    <div className="flex items-center space-x-3 rtl:space-x-reverse">
+                      <Phone className="w-5 h-5 text-green-600" />
+                      <div>
+                        <p className={cn('font-medium text-green-800 dark:text-green-200', theme.text.primary)} dir="ltr">
+                          {customerPhone}
+                        </p>
+                        <p className={cn('text-sm text-green-600 dark:text-green-400', theme.text.secondary)}>
+                          رقم الهاتف
+                        </p>
+                      </div>
+                    </div>
+                  )
+                })()}
+              </div>
+
+              {/* Pickup Message */}
+              <div className="flex items-center justify-center space-x-3 rtl:space-x-reverse p-4 bg-green-100 dark:bg-green-800/30 rounded-xl">
+                <Package className="w-8 h-8 text-green-600" />
+                <div className="text-center">
+                  <p className={cn('font-medium text-green-800 dark:text-green-200', theme.text.primary)}>
+                    سيتم استلام الطلب من المحل
                   </p>
-                  <p className={cn('text-sm text-gray-600 dark:text-gray-400', theme.text.secondary)}>
-                    رقم الهاتف
+                  <p className={cn('text-sm text-green-600 dark:text-green-400', theme.text.secondary)}>
+                    لا توجد رسوم توصيل
                   </p>
                 </div>
               </div>
-              
-              <div className="flex items-start space-x-3 rtl:space-x-reverse">
-                <MapPin className="w-5 h-5 text-gray-400 mt-1" />
-                <div>
-                  <p className={cn('font-medium text-gray-900 dark:text-white', theme.text.primary)}>
-                    {order.deliveryAddress.city}
-                  </p>
-                  <p className={cn('text-sm text-gray-600 dark:text-gray-400', theme.text.secondary)}>
-                    {order.deliveryAddress.addressDetails}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </motion.div>
+            </motion.div>
+          ) : null}
         </div>
 
         {/* Order Management */}
