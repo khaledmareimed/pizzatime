@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useToastContext } from '../../../../funcs/contexts/ToastContext';
 import { 
   Heart, 
   Star, 
@@ -46,6 +47,7 @@ export default function ItemDetailPage() {
   const router = useRouter();
   const itemId = params.itemid as string;
   const { addItem } = useCartContext();
+  const toast = useToastContext();
   
   // Fetch product data from database
   const { data: product, loading, error } = usePublicProduct(itemId);
