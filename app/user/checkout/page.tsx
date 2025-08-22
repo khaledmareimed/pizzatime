@@ -15,6 +15,7 @@ import PaymentInfo from '../../../components/PaymentInfo';
 import Button from '../../../components/Button';
 import Card from '../../../components/Card';
 import AddressForm from '../../../components/AddressForm';
+import DeliveryMethodSelector from '../../../components/DeliveryMethodSelector';
 
 export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -22,6 +23,9 @@ export default function CheckoutPage() {
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
   const [showAddressForm, setShowAddressForm] = useState(false);
+  const [deliveryMethod, setDeliveryMethod] = useState<'delivery' | 'pickup'>('delivery');
+  const [pickupInfo, setPickupInfo] = useState({ fullName: '', phone: '' });
+  const [pickupErrors, setPickupErrors] = useState<{ fullName?: string; phone?: string }>({});
   const [appliedCoupon, setAppliedCoupon] = useState<{
     code: string;
     name: string;
@@ -455,6 +459,22 @@ export default function CheckoutPage() {
   }, []);
 
 
+  // Validation function for pickup info
+  const validatePickupInfo = () => {
+    const errors: { fullName?: string; phone?: string } = {};
+    
+    if (!pickupInfo.fullName.trim()) {
+      errors.fullName = 'الاسم الكامل مطلوب';
+    }
+    
+    if (!pickupInfo.phone.trim()) {
+      errors.phone = 'رقم الهاتف مطلوب';
+    }
+    
+    setPickupErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleFormSubmit = async (formData: any) => {
     setIsSubmitting(true);
     
@@ -469,19 +489,27 @@ export default function CheckoutPage() {
         return;
       }
 
-      // Get selected address
-      const selectedAddress = userAddresses.find(addr => addr._id === selectedAddressId);
-      if (!selectedAddress) {
-        toast.error('عنوان التوصيل مطلوب', 'يرجى اختيار عنوان التوصيل');
-        setIsSubmitting(false);
-        return;
-      }
+      // Validate based on delivery method
+      if (deliveryMethod === 'delivery') {
+        const selectedAddress = userAddresses.find(addr => addr._id === selectedAddressId);
+        if (!selectedAddress) {
+          toast.error('عنوان التوصيل مطلوب', 'يرجى اختيار عنوان التوصيل أولاً');
+          setIsSubmitting(false);
+          return;
+        }
 
-      // Validate delivery price is loaded
-      if (!currentDeliveryFee || currentDeliveryFee <= 0) {
-        toast.error('تكلفة التوصيل مطلوبة', 'يرجى اختيار عنوان صحيح مع تكلفة توصيل محددة');
-        setIsSubmitting(false);
-        return;
+        // Validate delivery price is loaded
+        if (!currentDeliveryFee || currentDeliveryFee < 0) {
+          toast.error('تكلفة التوصيل مطلوبة', 'يرجى انتظار تحميل تكلفة التوصيل للعنوان المحدد');
+          setIsSubmitting(false);
+          return;
+        }
+      } else if (deliveryMethod === 'pickup') {
+        if (!validatePickupInfo()) {
+          toast.error('معلومات الاستلام مطلوبة', 'يرجى إكمال الاسم الكامل ورقم الهاتف للاستلام');
+          setIsSubmitting(false);
+          return;
+        }
       }
 
       console.log(`✅ Order validation passed - Delivery fee: ${currentDeliveryFee} JOD`);
@@ -500,20 +528,30 @@ export default function CheckoutPage() {
           options: item.options,
           comments: item.comments
         })),
-        deliveryAddress: {
-          name: selectedAddress.name,
-          recipientName: selectedAddress.recipientName,
-          city: selectedAddress.city,
-          cityId: selectedAddress.cityId || '',
-          location: selectedAddress.location || '',
-          locationId: selectedAddress.locationId || '',
+        deliveryAddress: deliveryMethod === 'delivery' ? {
+          name: userAddresses.find(addr => addr._id === selectedAddressId)?.name || '',
+          recipientName: userAddresses.find(addr => addr._id === selectedAddressId)?.recipientName || '',
+          city: userAddresses.find(addr => addr._id === selectedAddressId)?.city || '',
+          cityId: userAddresses.find(addr => addr._id === selectedAddressId)?.cityId || '',
+          location: userAddresses.find(addr => addr._id === selectedAddressId)?.location || '',
+          locationId: userAddresses.find(addr => addr._id === selectedAddressId)?.locationId || '',
           deliveryCost: currentDeliveryFee,
-          phone: selectedAddress.phone,
-          addressDetails: selectedAddress.addressDetails
+          phone: userAddresses.find(addr => addr._id === selectedAddressId)?.phone || '',
+          addressDetails: userAddresses.find(addr => addr._id === selectedAddressId)?.addressDetails || ''
+        } : {
+          name: 'استلام من المطعم',
+          recipientName: pickupInfo.fullName,
+          city: 'N/A',
+          cityId: 'pickup',
+          location: 'N/A',
+          locationId: 'pickup',
+          deliveryCost: 0,
+          phone: pickupInfo.phone,
+          addressDetails: 'الاستلام من المطعم لا يوجد رسوم توصيل'
         },
         notes: formData.notes,
         paymentMethod: 'cash', // Default to cash for now
-        deliveryMethod: 'delivery',
+        deliveryMethod: deliveryMethod,
         // Include coupon data if applied
         ...(appliedCoupon && {
           coupon: {
@@ -641,11 +679,11 @@ export default function CheckoutPage() {
         >
           {orderItems.length > 0 ? (
             <OrderDetails 
-              key={`order-details-${selectedAddressId}-${currentDeliveryFee}`}
+              key={`order-details-${selectedAddressId}-${currentDeliveryFee}-${deliveryMethod}`}
               items={orderItems}
               onUpdateQuantity={handleUpdateQuantity}
               onRemoveItem={handleRemoveItem}
-              deliveryFee={currentDeliveryFee}
+              deliveryFee={deliveryMethod === 'pickup' ? 0 : currentDeliveryFee}
               onCouponChange={handleCouponChange}
             />
           ) : (
@@ -729,7 +767,28 @@ export default function CheckoutPage() {
                   transition={{ duration: 0.4, delay: 0.2 }}
                   className="lg:col-span-2 space-y-6"
                 >
-                  {/* User Addresses */}
+                  {/* Payment Method - Show before address on mobile only */}
+                  <div className="lg:hidden">
+                    <PaymentInfo />
+                  </div>
+                  
+                  {/* Delivery Method Selector */}
+                  <DeliveryMethodSelector
+                    selectedMethod={deliveryMethod}
+                    onMethodChange={(method) => {
+                      setDeliveryMethod(method);
+                      if (method === 'pickup') {
+                        setCurrentDeliveryFee(0);
+                        setSelectedAddressId(null);
+                      }
+                    }}
+                    pickupInfo={pickupInfo}
+                    onPickupInfoChange={setPickupInfo}
+                    errors={pickupErrors}
+                  />
+                  
+                  {/* User Addresses - Only show for delivery */}
+                  {deliveryMethod === 'delivery' && (
                   <Card className="p-6">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className={cn(
@@ -832,19 +891,19 @@ export default function CheckoutPage() {
                       </div>
                     )}
                   </Card>
-
-
-                  {/* Checkout Form - Only show if address is selected and has delivery price */}
-                  {selectedAddressId && currentDeliveryFee > 0 && (
-                    <CheckoutForm 
-                      onSubmit={handleFormSubmit}
-                      isSubmitting={isSubmitting}
-                      selectedAddress={userAddresses.find(addr => addr._id === selectedAddressId)}
-                    />
                   )}
+
+                  {/* Checkout Form - Always visible */}
+                  <CheckoutForm 
+                    onSubmit={handleFormSubmit}
+                    isSubmitting={isSubmitting}
+                    selectedAddress={userAddresses.find(addr => addr._id === selectedAddressId)}
+                    deliveryMethod={deliveryMethod}
+                    pickupInfo={pickupInfo}
+                  />
                   
                   {/* Show message if address selected but no delivery price */}
-                  {selectedAddressId && currentDeliveryFee <= 0 && (
+                  {deliveryMethod === 'delivery' && selectedAddressId && currentDeliveryFee < 0 && (
                     <div className={cn(
                       'p-6 rounded-2xl border-2 border-dashed border-orange-300 dark:border-orange-700',
                       theme.background.card
@@ -871,7 +930,10 @@ export default function CheckoutPage() {
                   transition={{ duration: 0.4, delay: 0.3 }}
                   className="lg:col-span-1 space-y-6"
                 >
-                  <PaymentInfo />
+                  {/* Payment Method - Show in sidebar on desktop */}
+                  <div className="hidden lg:block">
+                    <PaymentInfo />
+                  </div>
                 </motion.div>
               </div>
             )}

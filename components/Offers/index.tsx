@@ -5,6 +5,11 @@ import { motion } from 'framer-motion';
 import { Percent, Gift, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '../../funcs/utils';
 import { theme, responsive, animations } from '../../funcs/responsive';
+
+// Custom function to format price with English numerals and JOD currency
+const formatOfferPrice = (price: number): string => {
+  return `${price.toFixed(2)} JOD`;
+};
 import Card from '../Card';
 import Button from '../Button';
 import type { OfferItem } from '../../funcs/utils';
@@ -13,8 +18,8 @@ const offers: OfferItem[] = [
   {
     id: '1',
     title: 'عرض العائلة المميز',
-    description: '٢ بيتزا كبيرة + ٢ مشروب + حلى',
-    discount: '١٤٩ ريال',
+    description: '2 بيتزا كبيرة + 2 مشروب + حلى',
+    discount: '149.00',
     image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400&h=300&fit=crop&crop=center',
     validUntil: '2025-12-31',
     code: 'FAMILY39'
@@ -23,7 +28,7 @@ const offers: OfferItem[] = [
     id: '2',
     title: 'وجبة البرجر الشاملة',
     description: 'برجر لحم + بطاطس مقلية + مشروب',
-    discount: '٤٩ ريال',
+    discount: '49.00',
     image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop&crop=center',
     validUntil: '2025-12-31',
     code: 'BURGER12'
@@ -32,7 +37,7 @@ const offers: OfferItem[] = [
     id: '3',
     title: 'عرض الغداء الخاص',
     description: 'أي طبق رئيسي + طبق جانبي + مشروب',
-    discount: '٥٩ ريال',
+    discount: '59.00',
     image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=300&fit=crop&crop=center',
     validUntil: '2025-12-31',
     code: 'LUNCH15'
@@ -41,7 +46,7 @@ const offers: OfferItem[] = [
     id: '4',
     title: 'فطور نهاية الأسبوع',
     description: 'بان كيك + قهوة + عصير طازج',
-    discount: '٦٩ ريال',
+    discount: '69.00',
     image: 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&h=300&fit=crop&crop=center',
     validUntil: '2025-12-31',
     code: 'BRUNCH18'
@@ -169,7 +174,7 @@ export default function Offers({ onClaimOffer }: OffersProps) {
                       'px-3 py-1 rounded-full text-xs font-bold',
                       'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
                     )}>
-                      {offer.discount}
+                      {formatOfferPrice(parseFloat(offer.discount))}
                     </div>
                   </div>
 

@@ -106,7 +106,7 @@ export default function AdminDashboard({ session }: AdminDashboardProps) {
         {...animations.slideIn}
         className="bg-white dark:bg-gray-800 rounded-3xl shadow-lg p-6 mb-8"
       >
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div className="flex items-center space-x-4 rtl:space-x-reverse">
             {session.user?.image && (
               <motion.img
@@ -116,7 +116,7 @@ export default function AdminDashboard({ session }: AdminDashboardProps) {
                 className="w-16 h-16 rounded-full border-4 border-red-500"
               />
             )}
-            <div>
+            <div className="flex-1">
               <h1 className={cn(
                 'text-2xl font-bold text-gray-900 dark:text-white',
                 theme.text.primary
@@ -130,10 +130,30 @@ export default function AdminDashboard({ session }: AdminDashboardProps) {
                 <div className="w-2 h-2 bg-red-500 rounded-full mr-2 rtl:ml-2"></div>
                 وضع الإدارة
               </div>
+              
+              {/* Buttons under email and badge - Mobile only */}
+              <div className="flex items-center space-x-2 rtl:space-x-reverse mt-4 md:hidden">
+                <Link href="/user">
+                  <Button variant="outline" size="sm">
+                    <Home className="w-4 h-4 mr-2 rtl:ml-2" />
+                    مشاهده المتجر
+                  </Button>
+                </Link>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleSignOut}
+                  className="text-red-600 border-red-200 hover:bg-red-50"
+                >
+                  <LogOut className="w-4 h-4 mr-2 rtl:ml-2" />
+                  تسجيل خروج
+                </Button>
+              </div>
             </div>
           </div>
           
-          <div className="flex items-center space-x-2 rtl:space-x-reverse">
+          {/* Buttons on the right - Desktop only */}
+          <div className="hidden md:flex items-center space-x-2 rtl:space-x-reverse">
             <Link href="/user">
               <Button variant="outline" size="sm">
                 <Home className="w-4 h-4 mr-2 rtl:ml-2" />

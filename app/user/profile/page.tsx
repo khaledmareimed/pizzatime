@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -12,8 +12,6 @@ import {
   Edit3, 
   LogOut,
   Shield,
-  Bell,
-  Globe,
   Heart,
   ShoppingBag,
   Clock,
@@ -28,9 +26,11 @@ import { User as UserType, UserAddress } from '../../../funcs/collections/user';
 import { useToastContext } from '../../../funcs/contexts/ToastContext';
 import Card from '../../../components/Card';
 import Button from '../../../components/Button';
-import AddressForm from '../../../components/AddressForm';
-import OrdersSection from '../../../components/OrdersSection';
-import ConfirmDialog from '../../../components/ConfirmDialog';
+
+// Lazy load heavy components
+const AddressForm = lazy(() => import('../../../components/AddressForm'));
+const OrdersSection = lazy(() => import('../../../components/OrdersSection'));
+const ConfirmDialog = lazy(() => import('../../../components/ConfirmDialog'));
 
 interface UserProfile {
   name: string;
@@ -44,8 +44,6 @@ export default function ProfilePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const toast = useToastContext();
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [notifications, setNotifications] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [editingAddress, setEditingAddress] = useState<UserAddress | null>(null);
@@ -56,6 +54,7 @@ export default function ProfilePage() {
     message: string;
     onConfirm: () => void;
   } | null>(null);
+  const [activeTab, setActiveTab] = useState<'addresses' | 'orders'>('addresses');
   
   // Real user data from database
   const [userData, setUserData] = useState<UserType | null>(null);
@@ -113,55 +112,62 @@ export default function ProfilePage() {
   const fetchUserData = async () => {
     setIsLoading(true);
     try {
-      // Fetch delivery areas first
-      const areasResponse = await fetch('/api/public/delivery-areas');
-      if (areasResponse.ok) {
-        const areasData = await areasResponse.json();
-        setDeliveryAreas(areasData.data?.areas || []);
-      }
+      // Fetch critical data first (user profile and addresses) - parallel
+      const [userResponse, addressResponse] = await Promise.all([
+        fetch('/api/users'),
+        fetch('/api/users/addresses-direct').catch(() => fetch('/api/users/addresses'))
+      ]);
 
-      // Fetch user profile
-      const userResponse = await fetch('/api/users');
+      // Process critical data immediately
       if (userResponse.ok) {
         const userData = await userResponse.json();
         setUserData(userData.data);
       }
 
-      // Fetch user addresses using direct API
-      let addressResponse = await fetch('/api/users/addresses-direct');
-      if (!addressResponse.ok) {
-        // Fallback to regular API
-        addressResponse = await fetch('/api/users/addresses');
-      }
       if (addressResponse.ok) {
         const addressData = await addressResponse.json();
         setUserAddresses(addressData.data || []);
       }
 
-      // Fetch user orders for stats
-      const ordersResponse = await fetch('/api/users/orders?limit=1');
-      if (ordersResponse.ok) {
-        const ordersData = await ordersResponse.json();
-        setOrderStats(prev => ({
-          ...prev,
-          totalOrders: ordersData.pagination?.total || 0,
-          lastOrderDate: ordersData.data?.[0]?.createdAt ? new Date(ordersData.data[0].createdAt) : null
-        }));
-      }
+      // Page is now ready to show - set loading to false
+      setIsLoading(false);
 
-      // Fetch favorites count
-      const favoritesResponse = await fetch('/api/users/favorites');
-      if (favoritesResponse.ok) {
-        const favoritesData = await favoritesResponse.json();
-        setOrderStats(prev => ({
-          ...prev,
-          totalFavorites: favoritesData.data?.length || 0
-        }));
-      }
+      // Fetch non-critical data in background (parallel)
+      Promise.all([
+        fetch('/api/public/delivery-areas'),
+        fetch('/api/users/orders?limit=1'),
+        fetch('/api/users/favorites')
+      ]).then(async ([areasResponse, ordersResponse, favoritesResponse]) => {
+        // Process delivery areas
+        if (areasResponse.ok) {
+          const areasData = await areasResponse.json();
+          setDeliveryAreas(areasData.data?.areas || []);
+        }
+
+        // Process orders stats
+        if (ordersResponse.ok) {
+          const ordersData = await ordersResponse.json();
+          setOrderStats(prev => ({
+            ...prev,
+            totalOrders: ordersData.pagination?.total || 0,
+            lastOrderDate: ordersData.data?.[0]?.createdAt ? new Date(ordersData.data[0].createdAt) : null
+          }));
+        }
+
+        // Process favorites count
+        if (favoritesResponse.ok) {
+          const favoritesData = await favoritesResponse.json();
+          setOrderStats(prev => ({
+            ...prev,
+            totalFavorites: favoritesData.data?.length || 0
+          }));
+        }
+      }).catch(error => {
+        console.error('Error fetching background data:', error);
+      });
 
     } catch (error) {
-      console.error('Error fetching user data:', error);
-    } finally {
+      console.error('Error fetching critical user data:', error);
       setIsLoading(false);
     }
   };
@@ -273,14 +279,7 @@ export default function ProfilePage() {
       value: orderStats.totalFavorites.toString(),
       color: 'text-red-600'
     },
-    {
-      icon: Clock,
-      label: 'آخر طلب',
-      value: orderStats.lastOrderDate 
-        ? `${Math.ceil((Date.now() - orderStats.lastOrderDate.getTime()) / (1000 * 60 * 60 * 24))} أيام`
-        : 'لا يوجد',
-      color: 'text-green-600'
-    }
+   
   ];
 
   // Show loading state
@@ -351,45 +350,58 @@ export default function ProfilePage() {
               </div>
 
               {/* Profile Image */}
-              <div className="flex items-center mb-6">
-                <div className="relative">
-                  {session.user?.image ? (
-                    <img
-                      src={session.user.image}
-                      alt={session.user.name || 'المستخدم'}
-                      className="w-20 h-20 rounded-2xl object-cover"
-                    />
-                  ) : (
-                    <div className={cn(
-                      'w-20 h-20 rounded-2xl flex items-center justify-center',
-                      'bg-orange-500 text-white'
-                    )}>
-                      <User className="w-8 h-8" />
-                    </div>
-                  )}
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center">
+                  <div className="relative">
+                    {session.user?.image ? (
+                      <img
+                        src={session.user.image}
+                        alt={session.user.name || 'المستخدم'}
+                        className="w-20 h-20 rounded-2xl object-cover"
+                      />
+                    ) : (
+                      <div className={cn(
+                        'w-20 h-20 rounded-2xl flex items-center justify-center',
+                        'bg-orange-500 text-white'
+                      )}>
+                        <User className="w-8 h-8" />
+                      </div>
+                    )}
+                    
+                    {session.user?.role === 'admin' && (
+                      <div className="absolute -top-1 -right-1 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+                        <Shield className="w-3 h-3 text-white" />
+                      </div>
+                    )}
+                  </div>
                   
-                  {session.user?.role === 'admin' && (
-                    <div className="absolute -top-1 -right-1 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
-                      <Shield className="w-3 h-3 text-white" />
-                    </div>
-                  )}
+                  <div className="mr-4">
+                    <h3 className={cn(
+                      'font-bold',
+                      responsive.fontSize.lg,
+                      theme.text.primary
+                    )}>
+                      {userData?.name || session.user?.name}
+                    </h3>
+                    <p className={cn('text-sm', theme.text.secondary)}>
+                      {userData?.role === 'admin' ? 'مدير' : 'عضو'}
+                    </p>
+                    <p className={cn('text-xs', theme.text.secondary)}>
+                      عضو منذ {userData?.dateJoined ? formatJordanDate(userData.dateJoined) : 'غير محدد'}
+                    </p>
+                  </div>
                 </div>
                 
-                <div className="mr-4">
-                  <h3 className={cn(
-                    'font-bold',
-                    responsive.fontSize.lg,
-                    theme.text.primary
-                  )}>
-                    {userData?.name || session.user?.name}
-                  </h3>
-                  <p className={cn('text-sm', theme.text.secondary)}>
-                    {userData?.role === 'admin' ? 'مدير' : 'عضو'}
-                  </p>
-                  <p className={cn('text-xs', theme.text.secondary)}>
-                    عضو منذ {userData?.dateJoined ? formatJordanDate(userData.dateJoined) : 'غير محدد'}
-                  </p>
-                </div>
+                {/* Logout Button */}
+                <Button
+                  onClick={handleSignOut}
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20"
+                >
+                  <LogOut className="w-4 h-4" />
+                  تسجيل الخروج
+                </Button>
               </div>
 
               {/* Profile Fields */}
@@ -415,117 +427,158 @@ export default function ProfilePage() {
                 </div>
 
 
-                {/* Addresses Management */}
+                {/* Addresses and Orders Tabs */}
                 <div>
+                  {/* Tab Navigation */}
                   <div className="flex items-center justify-between mb-4">
-                    <label className={cn(
-                      'block text-sm font-medium',
-                      theme.text.primary
-                    )}>
-                      العناوين المحفوظة
-                    </label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setActiveTab('addresses')}
+                        className={cn(
+                          'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                          activeTab === 'addresses'
+                            ? 'bg-orange-500 text-white'
+                            : cn('bg-gray-100 dark:bg-gray-800', theme.text.secondary, 'hover:bg-gray-200 dark:hover:bg-gray-700')
+                        )}
+                      >
+                        <MapPin className="w-4 h-4 inline mr-2" />
+                        العناوين
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('orders')}
+                        className={cn(
+                          'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                          activeTab === 'orders'
+                            ? 'bg-orange-500 text-white'
+                            : cn('bg-gray-100 dark:bg-gray-800', theme.text.secondary, 'hover:bg-gray-200 dark:hover:bg-gray-700')
+                        )}
+                      >
+                        <ShoppingBag className="w-4 h-4 inline mr-2" />
+                        الطلبات
+                      </button>
+                    </div>
                     
-                    <Button
-                      onClick={() => {
-                        setEditingAddress(null);
-                        setShowAddressForm(true);
-                      }}
-                      variant="outline"
-                      size="sm"
-                      className="gap-2"
-                    >
-                      <Plus className="w-4 h-4" />
-                      إضافة عنوان
-                    </Button>
-                  </div>
-
-                  {userAddresses.length === 0 ? (
-                    <div className={cn(
-                      'text-center py-8 rounded-xl',
-                      theme.background.secondary
-                    )}>
-                      <MapPin className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                      <p className={cn('mb-4', theme.text.secondary)}>
-                        لا توجد عناوين محفوظة
-                      </p>
+                    {activeTab === 'addresses' && (
                       <Button
                         onClick={() => {
                           setEditingAddress(null);
                           setShowAddressForm(true);
                         }}
-                        variant="accent"
+                        variant="outline"
                         size="sm"
                         className="gap-2"
                       >
                         <Plus className="w-4 h-4" />
-                        إضافة عنوان جديد
+                        إضافة عنوان
                       </Button>
+                    )}
+                  </div>
+
+                  {/* Tab Content */}
+                  {activeTab === 'addresses' ? (
+                    /* Addresses Content */
+                    <div>
+                      {userAddresses.length === 0 ? (
+                        <div className={cn(
+                          'text-center py-8 rounded-xl',
+                          theme.background.secondary
+                        )}>
+                          <MapPin className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                          <p className={cn('mb-4', theme.text.secondary)}>
+                            لا توجد عناوين محفوظة
+                          </p>
+                          <Button
+                            onClick={() => {
+                              setEditingAddress(null);
+                              setShowAddressForm(true);
+                            }}
+                            variant="accent"
+                            size="sm"
+                            className="gap-2"
+                          >
+                            <Plus className="w-4 h-4" />
+                            إضافة عنوان جديد
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {userAddresses.map((address) => (
+                            <div
+                              key={address._id}
+                              className={cn(
+                                'p-4 rounded-xl border',
+                                theme.border.primary,
+                                theme.background.card
+                              )}
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <h4 className={cn('font-medium', theme.text.primary)}>
+                                      {address.name}
+                                    </h4>
+                                    {address.isDefault && (
+                                      <span className="px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 rounded-full">
+                                        افتراضي
+                                      </span>
+                                    )}
+                                  </div>
+                                  
+                                  <p className={cn('text-sm mb-1', theme.text.secondary)}>
+                                    {(() => {
+                                      const resolvedLocation = resolveLocationName(address.cityId, address.locationId, address.location);
+                                      return `${address.city}${resolvedLocation && resolvedLocation.trim() ? ` - ${resolvedLocation}` : ''}`;
+                                    })()}
+                                  </p>
+                                  
+                                  <p className={cn('text-sm mb-1', theme.text.secondary)}>
+                                    {address.addressDetails}
+                                  </p>
+                                  
+                                  <p className={cn('text-sm', theme.text.secondary)}>
+                                    {address.phone}
+                                  </p>
+                                </div>
+                                
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => handleEditAddress(address)}
+                                    className={cn(
+                                      'p-2 rounded-lg transition-colors',
+                                      'hover:bg-gray-100 dark:hover:bg-gray-800',
+                                      theme.text.secondary
+                                    )}
+                                  >
+                                    <Edit3 className="w-4 h-4" />
+                                  </button>
+                                  
+                                  <button
+                                    onClick={() => handleDeleteAddress(address._id!)}
+                                    className={cn(
+                                      'p-2 rounded-lg transition-colors',
+                                      'hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400'
+                                    )}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ) : (
-                    <div className="space-y-3">
-                      {userAddresses.map((address) => (
-                        <div
-                          key={address._id}
-                          className={cn(
-                            'p-4 rounded-xl border',
-                            theme.border.primary,
-                            theme.background.card
-                          )}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <h4 className={cn('font-medium', theme.text.primary)}>
-                                  {address.name}
-                                </h4>
-                                {address.isDefault && (
-                                  <span className="px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 rounded-full">
-                                    افتراضي
-                                  </span>
-                                )}
-                              </div>
-                              
-                              <p className={cn('text-sm mb-1', theme.text.secondary)}>
-                                {(() => {
-                                  const resolvedLocation = resolveLocationName(address.cityId, address.locationId, address.location);
-                                  return `${address.city}${resolvedLocation && resolvedLocation.trim() ? ` - ${resolvedLocation}` : ''}`;
-                                })()}
-                              </p>
-                              
-                              <p className={cn('text-sm mb-1', theme.text.secondary)}>
-                                {address.addressDetails}
-                              </p>
-                              
-                              <p className={cn('text-sm', theme.text.secondary)}>
-                                {address.phone}
-                              </p>
-                            </div>
-                            
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => handleEditAddress(address)}
-                                className={cn(
-                                  'p-2 rounded-lg transition-colors',
-                                  'hover:bg-gray-100 dark:hover:bg-gray-800',
-                                  theme.text.secondary
-                                )}
-                              >
-                                <Edit3 className="w-4 h-4" />
-                              </button>
-                              
-                              <button
-                                onClick={() => handleDeleteAddress(address._id!)}
-                                className={cn(
-                                  'p-2 rounded-lg transition-colors',
-                                  'hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400'
-                                )}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
+                    /* Orders Content */
+                    <div className="mt-4">
+                      <Suspense fallback={
+                        <div className="flex justify-center items-center py-8">
+                          <Loader className="w-6 h-6 animate-spin text-orange-500 mr-2" />
+                          <span className={cn('text-sm', theme.text.secondary)}>تحميل الطلبات...</span>
                         </div>
-                      ))}
+                      }>
+                        <OrdersSection shouldFetch={activeTab === 'orders'} />
+                      </Suspense>
                     </div>
                   )}
                 </div>
@@ -570,99 +623,45 @@ export default function ProfilePage() {
               </div>
             </Card>
 
-            {/* Settings */}
-            <Card className="p-6">
-              <h3 className={cn(
-                'font-bold mb-4',
-                responsive.fontSize.lg,
-                theme.text.primary
-              )}>
-                الإعدادات
-              </h3>
-              
-              <div className="space-y-4">
-                {/* Notifications */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Bell className="w-5 h-5 text-gray-400" />
-                    <span className={cn('text-sm', theme.text.primary)}>
-                      الإشعارات
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => setNotifications(!notifications)}
-                    className={cn(
-                      'w-12 h-6 rounded-full transition-colors',
-                      notifications ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'
-                    )}
-                  >
-                    <div className={cn(
-                      'w-5 h-5 bg-white rounded-full transition-transform',
-                      notifications ? 'translate-x-6' : 'translate-x-0.5'
-                    )} />
-                  </button>
-                </div>
 
-                {/* Language */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Globe className="w-5 h-5 text-gray-400" />
-                    <span className={cn('text-sm', theme.text.primary)}>
-                      اللغة
-                    </span>
-                  </div>
-                  <span className={cn('text-sm', theme.text.secondary)}>
-                    العربية
-                  </span>
-                </div>
-              </div>
-            </Card>
-
-            {/* Orders Section */}
-            <OrdersSection />
-
-            {/* Sign Out */}
-            <Card className="p-6">
-              <Button
-                onClick={handleSignOut}
-                variant="outline"
-                fullWidth
-                className="gap-2 text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20"
-              >
-                <LogOut className="w-4 h-4" />
-                تسجيل الخروج
-              </Button>
-            </Card>
           </motion.div>
         </div>
       </div>
 
       {/* Address Form Modal */}
-      <AddressForm
-        isOpen={showAddressForm}
-        onClose={() => {
-          setShowAddressForm(false);
-          setEditingAddress(null);
-        }}
-        onSave={editingAddress ? handleUpdateAddress : handleAddAddress}
-        editingAddress={editingAddress}
-        isSubmitting={isSubmitting}
-      />
+      {showAddressForm && (
+        <Suspense fallback={null}>
+          <AddressForm
+            isOpen={showAddressForm}
+            onClose={() => {
+              setShowAddressForm(false);
+              setEditingAddress(null);
+            }}
+            onSave={editingAddress ? handleUpdateAddress : handleAddAddress}
+            editingAddress={editingAddress}
+            isSubmitting={isSubmitting}
+          />
+        </Suspense>
+      )}
 
       {/* Confirmation Dialog */}
-      <ConfirmDialog
-        isOpen={showConfirmDialog}
-        onClose={() => {
-          setShowConfirmDialog(false);
-          setConfirmDialogData(null);
-        }}
-        onConfirm={confirmDialogData?.onConfirm || (() => {})}
-        title={confirmDialogData?.title || ''}
-        message={confirmDialogData?.message || ''}
-        confirmText="حذف"
-        cancelText="إلغاء"
-        variant="danger"
-      />
+      {showConfirmDialog && (
+        <Suspense fallback={null}>
+          <ConfirmDialog
+            isOpen={showConfirmDialog}
+            onClose={() => {
+              setShowConfirmDialog(false);
+              setConfirmDialogData(null);
+            }}
+            onConfirm={confirmDialogData?.onConfirm || (() => {})}
+            title={confirmDialogData?.title || ''}
+            message={confirmDialogData?.message || ''}
+            confirmText="حذف"
+            cancelText="إلغاء"
+            variant="danger"
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

@@ -71,6 +71,12 @@ export function FavoritesProvider({ children }: FavoritesProviderProps) {
       return false;
     }
 
+    // Check if already in favorites
+    if (isFavorite(productId)) {
+      toast.info('منتج موجود', 'هذا المنتج موجود بالفعل في المفضلة');
+      return false;
+    }
+
     try {
       const response = await fetch('/api/users/favorites', {
         method: 'POST',
@@ -81,7 +87,8 @@ export function FavoritesProvider({ children }: FavoritesProviderProps) {
       });
 
       if (response.ok) {
-        await refreshFavorites(); // Refresh to get updated list
+        // Refresh to get the complete product data
+        await refreshFavorites();
         toast.success('تم إضافة المنتج للمفضلة!');
         return true;
       } else {
@@ -110,16 +117,22 @@ export function FavoritesProvider({ children }: FavoritesProviderProps) {
       return false;
     }
 
+    // Optimistic update - remove from UI immediately
+    const previousFavorites = [...favorites];
+    setFavorites(prev => prev.filter(fav => fav._id !== productId));
+
     try {
       const response = await fetch(`/api/users/favorites?productId=${productId}`, {
         method: 'DELETE',
       });
 
       if (response.ok) {
-        await refreshFavorites(); // Refresh to get updated list
-        toast.success('تم إزالة المنتج من المفضلة');
+        // Success - item already removed from UI, no need to refresh
         return true;
       } else {
+        // Error - revert the optimistic update
+        setFavorites(previousFavorites);
+        
         const errorData = await response.json();
         console.error('Failed to remove from favorites:', errorData.error);
         
@@ -132,6 +145,9 @@ export function FavoritesProvider({ children }: FavoritesProviderProps) {
         return false;
       }
     } catch (error) {
+      // Error - revert the optimistic update
+      setFavorites(previousFavorites);
+      
       console.error('Error removing from favorites:', error);
       toast.error('خطأ في الاتصال', 'حدث خطأ في الاتصال. يرجى المحاولة مرة أخرى');
       return false;

@@ -19,11 +19,11 @@ export function formatJordanDateTime(dateString: string | Date, options?: Intl.D
     calendar: 'gregory', // Explicitly use Gregorian calendar
     numberingSystem: 'latn', // Use Western Arabic numerals (0123456789)
     year: 'numeric',
-    month: 'long',
+    month: 'numeric',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-    hour12: false,
+    hour12: true,
     ...options
   }
   
@@ -40,7 +40,7 @@ export function formatJordanDate(dateString: string | Date, options?: Intl.DateT
     timeZone: JORDAN_TIMEZONE,
     calendar: 'gregory', // Explicitly use Gregorian calendar
     year: 'numeric',
-    month: 'long',
+    month: 'numeric',
     day: 'numeric',
     numberingSystem: 'latn', // Use Western Arabic numerals (0123456789)
     ...options
@@ -60,7 +60,7 @@ export function formatJordanTime(dateString: string | Date, options?: Intl.DateT
     numberingSystem: 'latn', // Use Western Arabic numerals (0123456789)
     hour: '2-digit',
     minute: '2-digit',
-    hour12: false,
+    hour12: true,
     ...options
   }
   
@@ -68,7 +68,7 @@ export function formatJordanTime(dateString: string | Date, options?: Intl.DateT
 }
 
 /**
- * Format currency in Jordanian Dinar with Western Arabic numerals and د.أ symbol
+ * Format currency in Jordanian Dinar with Western Arabic numerals and JOD symbol
  */
 export function formatJordanCurrency(amount: number | undefined | null, options?: Intl.NumberFormatOptions): string {
   // Handle undefined, null, or invalid values
@@ -85,8 +85,8 @@ export function formatJordanCurrency(amount: number | undefined | null, options?
     ...options
   })
   
-  // Add the Arabic currency symbol
-  return `${formattedNumber} د.أ`
+  // Add the JOD currency symbol
+  return `${formattedNumber} JOD`
 }
 
 /**

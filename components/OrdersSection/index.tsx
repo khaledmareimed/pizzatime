@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '../../funcs/utils';
 import { theme, responsive } from '../../funcs/responsive';
+import { formatJordanDateTime, formatJordanCurrency } from '../../funcs/jordanLocale';
 import Card from '../Card';
 
 interface OrderItem {
@@ -52,24 +53,67 @@ interface Order {
   };
 }
 
-export default function OrdersSection() {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+interface OrdersSectionProps {
+  shouldFetch?: boolean;
+  onDataLoaded?: (orders: Order[]) => void;
+}
+
+// Cache for orders data
+let ordersCache: {
+  data: Order[] | null;
+  timestamp: number;
+  isLoading: boolean;
+} = {
+  data: null,
+  timestamp: 0,
+  isLoading: false
+};
+
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+export default function OrdersSection({ shouldFetch = true, onDataLoaded }: OrdersSectionProps) {
+  const [orders, setOrders] = useState<Order[]>(ordersCache.data || []);
+  const [isLoading, setIsLoading] = useState(ordersCache.data === null);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
-    fetchOrders();
-  }, []);
+    if (!shouldFetch) return;
+
+    // Check if we have cached data that's still valid
+    const now = Date.now();
+    const isCacheValid = ordersCache.data !== null && 
+                        (now - ordersCache.timestamp) < CACHE_DURATION;
+
+    if (isCacheValid) {
+      setOrders(ordersCache.data!);
+      setIsLoading(false);
+      onDataLoaded?.(ordersCache.data!);
+      return;
+    }
+
+    // Only fetch if not already loading
+    if (!ordersCache.isLoading) {
+      fetchOrders();
+    }
+  }, [shouldFetch]);
 
   const fetchOrders = async () => {
     try {
+      ordersCache.isLoading = true;
       setIsLoading(true);
+      setError(null);
+      
       const response = await fetch('/api/users/orders?limit=10');
       const result = await response.json();
 
       if (response.ok && result.success) {
+        // Update cache
+        ordersCache.data = result.data;
+        ordersCache.timestamp = Date.now();
+        
         setOrders(result.data);
+        onDataLoaded?.(result.data);
       } else {
         throw new Error(result.error || 'فشل في جلب الطلبات');
       }
@@ -77,6 +121,7 @@ export default function OrdersSection() {
       console.error('Error fetching orders:', error);
       setError(error instanceof Error ? error.message : 'خطأ في جلب الطلبات');
     } finally {
+      ordersCache.isLoading = false;
       setIsLoading(false);
     }
   };
@@ -214,13 +259,7 @@ export default function OrdersSection() {
                     'text-sm',
                     theme.text.secondary
                   )}>
-                    {new Date(order.orderDate).toLocaleDateString('ar-SA', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
+                    {formatJordanDateTime(order.orderDate)}
                   </p>
                 </div>
                 <span className={cn(
@@ -241,7 +280,7 @@ export default function OrdersSection() {
                   </p>
                   {order.coupon && (
                     <p className="text-xs text-green-600 dark:text-green-400">
-                      قسيمة: {order.coupon.code} (-{order.coupon.discountAmount.toFixed(2)} ر.س)
+                      قسيمة: {order.coupon.code} (-{formatJordanCurrency(order.coupon.discountAmount)})
                     </p>
                   )}
                 </div>
@@ -249,7 +288,7 @@ export default function OrdersSection() {
                   <p className={cn(
                     'font-bold text-lg text-green-600 dark:text-green-400'
                   )}>
-                    {order.orderSummary.total.toFixed(2)} ر.س
+                    {formatJordanCurrency(order.orderSummary.total)}
                   </p>
                   <p className={cn(
                     'text-xs',

@@ -219,13 +219,13 @@ export default function ImageBanner({
 
           {/* Content */}
           <div className={cn(responsive.container.xl, 'px-4 h-full relative z-10')}>
-            <div className="flex items-center justify-between h-full">
-              {/* Left Content - Text */}
+            <div className="flex items-center h-full">
+              {/* Left Content - Text (positioned to the left side) */}
               <motion.div
                 initial={{ opacity: 0, x: -50 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.3, duration: 0.6 }}
-                className="max-w-lg text-center md:text-left"
+                className="max-w-sm sm:max-w-lg md:max-w-md text-left"
               >
                 <div className="text-white">
                   <motion.h2
@@ -233,8 +233,9 @@ export default function ImageBanner({
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4 }}
                     className={cn(
-                      'font-bold mb-4',
-                      'text-3xl md:text-4xl lg:text-5xl'
+                      'font-bold mb-3 md:mb-3',
+                      'text-xl sm:text-2xl md:text-3xl lg:text-4xl',
+                      'leading-tight'
                     )}
                   >
                     {currentBanner.title}
@@ -246,8 +247,9 @@ export default function ImageBanner({
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.5 }}
                       className={cn(
-                        'mb-8 text-white/90',
-                        'text-lg md:text-xl'
+                        'mb-5 md:mb-5 text-white/90',
+                        'text-base sm:text-lg md:text-xl',
+                        'leading-relaxed'
                       )}
                     >
                       {currentBanner.subtitle}
@@ -263,9 +265,12 @@ export default function ImageBanner({
                       whileTap={{ scale: 0.95 }}
                       onClick={() => handleSlideAction(currentBanner)}
                       className={cn(
-                        'px-8 py-4 bg-white text-gray-900 font-semibold rounded-2xl',
+                        'px-5 sm:px-6 md:px-7 py-2.5 sm:py-3 md:py-3.5',
+                        'bg-white text-gray-900 font-semibold rounded-xl',
                         'hover:bg-gray-100 transition-colors duration-200',
-                        'shadow-lg hover:shadow-xl text-lg'
+                        'shadow-lg hover:shadow-xl',
+                        'text-base sm:text-lg md:text-xl',
+                        'touch-manipulation inline-block'
                       )}
                     >
                       {currentBanner.ctaText}
@@ -280,9 +285,9 @@ export default function ImageBanner({
                   initial={{ opacity: 0, x: 50, scale: 0.8 }}
                   animate={{ opacity: 1, x: 0, scale: 1 }}
                   transition={{ delay: 0.4, duration: 0.6 }}
-                  className="hidden lg:block"
+                  className="hidden lg:block ml-auto"
                 >
-                  <div className="text-8xl xl:text-9xl">
+                  <div className="text-6xl xl:text-7xl">
                     {currentBanner.image}
                   </div>
                 </motion.div>
@@ -292,49 +297,56 @@ export default function ImageBanner({
         </motion.div>
       </AnimatePresence>
 
-      {/* Navigation Controls */}
-      <div className="absolute inset-0 flex items-center justify-between px-4 pointer-events-none">
-        {/* Next Button */}
-        <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={goToNext}
-          className={cn(
-            'pointer-events-auto w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm',
-            'flex items-center justify-center text-white hover:bg-white/30',
-            'transition-all duration-200 border border-white/20'
-          )}
-        >
-          <ChevronRight className="w-6 h-6" />
-        </motion.button>
+      {/* Navigation Controls - Fixed for mobile */}
+      {bannerSlides.length > 1 && (
+        <>
+          {/* Previous Button - Left side */}
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={goToPrevious}
+            className={cn(
+              'absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-20',
+              'w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/20 backdrop-blur-sm',
+              'flex items-center justify-center text-white hover:bg-white/30',
+              'transition-all duration-200 border border-white/20',
+              'touch-manipulation' // Better touch handling on mobile
+            )}
+          >
+            <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />
+          </motion.button>
 
-        {/* Previous Button */}
-        <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={goToPrevious}
-          className={cn(
-            'pointer-events-auto w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm',
-            'flex items-center justify-center text-white hover:bg-white/30',
-            'transition-all duration-200 border border-white/20'
-          )}
-        >
-          <ChevronLeft className="w-6 h-6" />
-        </motion.button>
-      </div>
+          {/* Next Button - Right side */}
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={goToNext}
+            className={cn(
+              'absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-20',
+              'w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/20 backdrop-blur-sm',
+              'flex items-center justify-center text-white hover:bg-white/30',
+              'transition-all duration-200 border border-white/20',
+              'touch-manipulation' // Better touch handling on mobile
+            )}
+          >
+            <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
+          </motion.button>
+        </>
+      )}
 
       {/* Bottom Controls */}
-      <div className="absolute bottom-4 left-0 right-0">
+      <div className="absolute bottom-2 md:bottom-4 left-0 right-0 z-20">
         <div className={cn(responsive.container.xl, 'px-4')}>
           <div className="flex items-center justify-between">
             {/* Dots Indicator */}
-            <div className="flex space-x-2">
+            <div className="flex space-x-1 md:space-x-2">
               {bannerSlides.map((_, index) => (
                 <button
                   key={index}
                   onClick={() => goToSlide(index)}
                   className={cn(
-                    'w-3 h-3 rounded-full transition-all duration-200',
+                    'w-2 h-2 md:w-3 md:h-3 rounded-full transition-all duration-200',
+                    'touch-manipulation', // Better touch handling
                     index === currentSlide
                       ? 'bg-white scale-125'
                       : 'bg-white/50 hover:bg-white/75'
@@ -343,41 +355,50 @@ export default function ImageBanner({
               ))}
             </div>
 
-            {/* Play/Pause Button */}
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={togglePlayPause}
-              className={cn(
-                'w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm',
-                'flex items-center justify-center text-white hover:bg-white/30',
-                'transition-all duration-200 border border-white/20'
-              )}
-            >
-              {isPlaying ? (
-                <Pause className="w-4 h-4" />
-              ) : (
-                <Play className="w-4 h-4 ml-0.5" />
-              )}
-            </motion.button>
+            {/* Play/Pause Button - Only show if there are multiple slides */}
+            {bannerSlides.length > 1 && (
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  togglePlayPause();
+                }}
+                className={cn(
+                  'w-8 h-8 md:w-10 md:h-10 rounded-full bg-white/20 backdrop-blur-sm',
+                  'flex items-center justify-center text-white hover:bg-white/30',
+                  'transition-all duration-200 border border-white/20',
+                  'touch-manipulation' // Better touch handling
+                )}
+              >
+                {isPlaying ? (
+                  <Pause className="w-3 h-3 md:w-4 md:h-4" />
+                ) : (
+                  <Play className="w-3 h-3 md:w-4 md:h-4 ml-0.5" />
+                )}
+              </motion.button>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Progress Bar */}
-      <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20">
-        <motion.div
-          className="h-full bg-white"
-          initial={{ width: "0%" }}
-          animate={{ width: "100%" }}
-          transition={{
-            duration: autoSlideInterval / 1000,
-            ease: "linear",
-            repeat: isPlaying ? Infinity : 0
-          }}
-          key={`${currentSlide}-${isPlaying}`}
-        />
-      </div>
+      {/* Progress Bar - Only show if auto-playing and multiple slides */}
+      {bannerSlides.length > 1 && isPlaying && (
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20">
+          <motion.div
+            className="h-full bg-white"
+            initial={{ width: "0%" }}
+            animate={{ width: "100%" }}
+            transition={{
+              duration: autoSlideInterval / 1000,
+              ease: "linear",
+              repeat: Infinity
+            }}
+            key={`progress-${currentSlide}-${isPlaying}`}
+          />
+        </div>
+      )}
     </section>
   );
 }

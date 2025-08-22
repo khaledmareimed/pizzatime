@@ -268,6 +268,23 @@ export default function Header({
                           </div>
                           
                           <div className="p-2">
+                            {session.user?.role === 'admin' && (
+                              <button
+                                onClick={() => {
+                                  router.push('/dash');
+                                  setIsProfileMenuOpen(false);
+                                }}
+                                className={cn(
+                                  'w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-colors',
+                                  'hover:bg-gray-100 dark:hover:bg-gray-800',
+                                  theme.text.primary
+                                )}
+                              >
+                                <Settings className="w-4 h-4" />
+                                لوحة التحكم
+                              </button>
+                            )}
+                            
                             <button
                               onClick={handleProfileClick}
                               className={cn(

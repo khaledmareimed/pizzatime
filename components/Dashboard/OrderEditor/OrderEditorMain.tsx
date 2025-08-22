@@ -49,7 +49,7 @@ export default function OrderEditor({ order, onSave, onCancel }: OrderEditorProp
     } : undefined
     
     return {
-      orderId: order._id || order.orderId,
+      orderId: order.orderId,
       customerInfo,
       deliveryInfo,
       items: order.items || [],

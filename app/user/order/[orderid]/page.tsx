@@ -456,7 +456,7 @@ export default function OrderDetailsPage() {
                     </div>
                     <div className="text-left">
                       <p className={cn('font-bold text-green-600 dark:text-green-400')}>
-                        {((item.price + 
+                        {formatJordanCurrency((item.price + 
                           item.addons.reduce((sum, addon) => sum + addon.price, 0) +
                           item.options.reduce((sum, option) => sum + option.choicePrice, 0)
                         ) * item.quantity)}

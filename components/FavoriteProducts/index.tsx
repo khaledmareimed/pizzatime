@@ -1,67 +1,40 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Star, Clock, Heart, Filter, Loader } from 'lucide-react';
+import { Star, Clock, Trash2, Filter, Loader } from 'lucide-react';
 import { cn } from '../../funcs/utils';
 import { theme, responsive, animations } from '../../funcs/responsive';
 import { formatPrice } from '../../funcs/utils';
-import { usePublicCategories, usePublicProducts } from '../../funcs/hooks/usePublicData';
-import { useCartContext } from '../../funcs/contexts/CartContext';
 import { useFavorites } from '../../funcs/contexts/FavoritesContext';
+import { useToastContext } from '../../funcs/contexts/ToastContext';
 import { Product } from '../../funcs/collections/product';
-import { Category } from '../../funcs/collections/category';
 import Card from '../Card';
 import Button from '../Button';
 
-interface ProductsProps {
-  onAddToCart?: (item: Product) => void;
+interface FavoriteProductsProps {
   onViewDetails?: (item: Product) => void;
-  limit?: number; // Optional limit for featured products
+  onRemoveFromFavorites?: (productId: string) => void;
 }
 
-export default function Products({ onAddToCart, onViewDetails, limit }: ProductsProps) {
-  const { addItem } = useCartContext();
-  const { isFavorite, toggleFavorite } = useFavorites();
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+export default function FavoriteProducts({ onViewDetails, onRemoveFromFavorites }: FavoriteProductsProps) {
+  const { favorites, removeFromFavorites } = useFavorites();
+  const toast = useToastContext();
 
-  // Fetch categories and products from database
-  const { data: categories, loading: categoriesLoading, error: categoriesError } = usePublicCategories();
-  const { data: products, loading: productsLoading, error: productsError } = usePublicProducts(); // Fetch all products without category filter
-
-  // Create menu categories with "All" option
-  const menuCategories = useMemo(() => {
-    const allCategory = { id: null, name: 'الجميع' };
-    const dbCategories = categories?.map(cat => ({ id: cat._id.toString(), name: cat.name })) || [];
-    return [allCategory, ...dbCategories];
-  }, [categories]);
-
-  // Filter and limit products
-  const filteredItems = useMemo(() => {
-    if (!products) return [];
-    
-    let filtered = products;
-    if (selectedCategoryId) {
-      filtered = products.filter(product => product.categoryId === selectedCategoryId);
-    }
-    
-    // Apply limit if specified (for featured products sections)
-    if (limit && limit > 0) {
-      filtered = filtered.slice(0, limit);
-    }
-    
-    return filtered;
-  }, [products, selectedCategoryId, limit]);
-
-
-  // Handle add to cart - use provided handler or default behavior
-  const handleAddToCart = (item: Product) => {
-    if (onAddToCart) {
-      onAddToCart(item);
+  // Handle remove from favorites - instant UI update
+  const handleRemoveFromFavorites = async (productId: string) => {
+    if (onRemoveFromFavorites) {
+      onRemoveFromFavorites(productId);
     } else {
-      // Default behavior: add to cart directly
-      addItem(item, 1, [], undefined);
-      alert(`تم إضافة ${item.productName} إلى السلة!`);
+      // Remove from favorites silently in background
+      try {
+        await removeFromFavorites(productId);
+        // No toast notifications - silent removal
+      } catch (err) {
+        console.error('Error removing from favorites:', err);
+        // Optionally show error toast only on failure
+        toast.error('خطأ في الإزالة', 'حدث خطأ في إزالة المنتج من المفضلة');
+      }
     }
   };
 
@@ -72,66 +45,12 @@ export default function Products({ onAddToCart, onViewDetails, limit }: Products
     )}>
       <div className={cn(responsive.container.xl, 'px-4')}>
         {/* Section Header */}
-    
-
-        {/* Loading State */}
-        {(categoriesLoading || productsLoading) && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex justify-center items-center py-8"
-          >
-            <Loader className="w-6 h-6 animate-spin text-orange-500 mr-2" />
-            <span className={cn('text-lg', theme.text.secondary)}>تحميل المنتجات...</span>
-          </motion.div>
-        )}
-
-        {/* Error State */}
-        {(categoriesError || productsError) && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center mb-8 p-4 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg"
-          >
-            <p>خطأ في تحميل البيانات. يرجى المحاولة مرة أخرى.</p>
-          </motion.div>
-        )}
-
-        {/* Category Filter - only show if not limiting products and categories are loaded */}
-        {!limit && !categoriesLoading && menuCategories.length > 1 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="flex overflow-x-auto pb-2 mb-12 gap-2 md:justify-center"
-          >
-            {menuCategories.map((category) => (
-              <button
-                key={category.id || 'all'}
-                onClick={() => setSelectedCategoryId(category.id)}
-                className={cn(
-                  'px-6 py-3 rounded-2xl font-medium whitespace-nowrap transition-all duration-200',
-                  selectedCategoryId === category.id
-                    ? 'bg-orange-500 text-white shadow-lg'
-                    : cn(
-                        theme.colors.secondary.light,
-                        theme.colors.secondary.dark,
-                        theme.text.primary,
-                        'hover:shadow-md'
-                      )
-                )}
-              >
-                {category.name}
-              </button>
-            ))}
-          </motion.div>
-        )}
+      
 
         {/* Products Grid */}
-        {!productsLoading && filteredItems && filteredItems.length > 0 && (
+        {favorites && favorites.length > 0 && (
           <AnimatePresence mode="wait">
             <motion.div
-              key={selectedCategoryId || 'all'}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -141,7 +60,7 @@ export default function Products({ onAddToCart, onViewDetails, limit }: Products
                 responsive.grid.desktop
               )}
             >
-              {filteredItems.map((item, index) => {
+              {favorites.map((item, index) => {
                 // Get the primary image URL (first image or placeholder)
                 const primaryImage = item.imagesUrl && item.imagesUrl.length > 0 
                   ? item.imagesUrl[0] 
@@ -167,6 +86,7 @@ export default function Products({ onAddToCart, onViewDetails, limit }: Products
                     key={item._id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
                     transition={{ delay: index * 0.1 }}
                   >
                     <Card
@@ -181,24 +101,22 @@ export default function Products({ onAddToCart, onViewDetails, limit }: Products
                         </div>
                       )}
 
-                      {/* Favorite Button */}
+                      {/* Remove from Favorites Button */}
                       <motion.button
                         whileTap={{ scale: 0.9 }}
+                        whileHover={{ scale: 1.1 }}
                         onClick={async (e: React.MouseEvent) => {
                           e.stopPropagation(); // Prevent card click
-                          await toggleFavorite(item._id);
+                          await handleRemoveFromFavorites(item._id);
                         }}
                         className={cn(
-                          'absolute top-4 right-4 z-10 p-2 rounded-full transition-colors',
-                          isFavorite(item._id)
-                            ? 'bg-red-500 text-white'
-                            : 'bg-white/80 dark:bg-gray-800/80 text-gray-600 dark:text-gray-400'
+                          'absolute top-4 right-4 z-10 p-2 rounded-full transition-all duration-200',
+                          'bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm',
+                          'text-red-500 hover:text-red-600 hover:bg-white dark:hover:bg-gray-800',
+                          'shadow-lg hover:shadow-xl'
                         )}
                       >
-                        <Heart className={cn(
-                          'w-4 h-4',
-                          isFavorite(item._id) ? 'fill-current' : ''
-                        )} />
+                        <Trash2 className="w-4 h-4" />
                       </motion.button>
 
                       {/* Product Image */}
@@ -253,7 +171,7 @@ export default function Products({ onAddToCart, onViewDetails, limit }: Products
                           </div>
                         )}
 
-                        {/* Price and View Button */}
+                        {/* Price and Actions */}
                         <div className="flex items-center justify-between pt-2">
                           {hasValidPrice && (
                             <div className="flex flex-col">
@@ -271,20 +189,19 @@ export default function Products({ onAddToCart, onViewDetails, limit }: Products
                             </div>
                           )}
 
-                          <div className="flex items-center">
-                            <Button
-                              onClick={(e) => {
-                                e?.stopPropagation(); // Prevent card click
-                                onViewDetails?.(item);
-                              }}
-                              variant={item.available ? "accent" : "outline"}
-                              size="sm"
-                              disabled={!item.available}
-                              className={!item.available ? "text-red-500 border-red-300 cursor-not-allowed" : ""}
-                            >
-                              {item.available ? "عرض" : "غير متوفر"}
-                            </Button>
-                          </div>
+                          {/* View Details Button */}
+                          <Button
+                            onClick={(e) => {
+                              e?.stopPropagation(); // Prevent card click
+                              onViewDetails?.(item);
+                            }}
+                            variant={item.available ? "accent" : "outline"}
+                            size="sm"
+                            disabled={!item.available}
+                            className={!item.available ? "text-red-500 border-red-300 cursor-not-allowed" : ""}
+                          >
+                            {item.available ? "عرض" : "غير متوفر"}
+                          </Button>
                         </div>
                       </div>
                     </Card>
@@ -296,56 +213,50 @@ export default function Products({ onAddToCart, onViewDetails, limit }: Products
         )}
 
         {/* Empty State */}
-        {!productsLoading && filteredItems && filteredItems.length === 0 && (
+        {(!favorites || favorites.length === 0) && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="text-center py-12"
           >
-            <div className="text-6xl mb-4">🍽️</div>
+            <div className="text-6xl mb-4">❤️</div>
             <h3 className={cn(
               'font-bold mb-2',
               responsive.fontSize.lg,
               theme.text.primary
             )}>
-              لا توجد منتجات متاحة
+              لا توجد مفضلة بعد
             </h3>
             <p className={cn(theme.text.secondary)}>
-              {selectedCategoryId 
-                ? 'لا توجد منتجات متاحة في هذه الفئة حالياً' 
-                : 'لا توجد منتجات متاحة حالياً'
-              }
+              ابدأ في استكشاف قائمتنا واحفظ أطباقك المفضلة
             </p>
-            {selectedCategoryId && (
-              <Button
-                onClick={() => setSelectedCategoryId(null)}
-                variant="outline"
-                className="mt-4"
-              >
-                إظهار جميع المنتجات
-              </Button>
-            )}
+            <Button
+              onClick={() => window.location.href = '/user/menu'}
+              variant="accent"
+              className="mt-4"
+            >
+              تصفح القائمة
+            </Button>
           </motion.div>
         )}
 
-        {/* Load More - only show if not limiting products and there might be more */}
-        {!limit && !productsLoading && filteredItems && filteredItems.length > 0 && (
+        {/* Summary */}
+        {favorites && favorites.length > 0 && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.8 }}
-            className="text-center mt-12"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+            className="mt-12 text-center"
           >
-            <Button 
-              variant="outline" 
-              size="lg"
-              onClick={() => {
-                // Could implement pagination here
-                console.log('Load more products...');
-              }}
-            >
-              تحميل المزيد من المنتجات
-            </Button>
+            <Card className="inline-block px-8 py-4">
+              <p className={cn('text-sm', theme.text.secondary)}>
+                لديك{' '}
+                <span className={cn('font-bold', theme.text.primary)}>
+                  {favorites.length}
+                </span>
+                {' '}منتج في المفضلة
+              </p>
+            </Card>
           </motion.div>
         )}
       </div>

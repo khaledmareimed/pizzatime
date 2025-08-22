@@ -17,7 +17,9 @@ import {
   Camera,
   MessageSquare,
   Check,
-  Loader
+  Loader,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { cn } from '../../../../funcs/utils';
 import { theme, responsive } from '../../../../funcs/responsive';
@@ -53,6 +55,7 @@ export default function ItemDetailPage() {
   const { data: product, loading, error } = usePublicProduct(itemId);
   
   const [selectedImage, setSelectedImage] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [selectedAddons, setSelectedAddons] = useState<SelectedAddon[]>([]);
   const [selectedOptions, setSelectedOptions] = useState<SelectedOption[]>([]);
@@ -139,8 +142,16 @@ export default function ItemDetailPage() {
     : ['https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=800&h=600&fit=crop'];
 
   // Calculate display price (use discount price if available)
-  const displayPrice = product.productDiscountPrice || product.productPrice;
-  const hasDiscount = product.productDiscountPrice && product.productDiscountPrice < product.productPrice;
+  const originalPrice = product.productPrice || 0;
+  const discountPrice = product.productDiscountPrice || 0;
+  
+  // Determine which price to display
+  const displayPrice = (discountPrice > 0 && discountPrice < originalPrice) ? discountPrice : originalPrice;
+  
+  // Check if there's a valid discount
+  const hasDiscount = discountPrice > 0 && 
+                    originalPrice > 0 && 
+                    discountPrice < originalPrice;
 
   const toggleAddon = (addon: { id: string; name: string; price: number }) => {
     setSelectedAddons(prev => {
@@ -167,6 +178,19 @@ export default function ItemDetailPage() {
     const addonsPrice = selectedAddons.reduce((sum, addon) => sum + addon.price, 0) * quantity;
     const optionsPrice = selectedOptions.reduce((sum, option) => sum + option.choicePrice, 0) * quantity;
     return basePrice + addonsPrice + optionsPrice;
+  };
+
+  // Image slider navigation functions
+  const nextImage = () => {
+    setSelectedImage((prev) => (prev + 1) % productImages.length);
+  };
+
+  const prevImage = () => {
+    setSelectedImage((prev) => (prev - 1 + productImages.length) % productImages.length);
+  };
+
+  const goToImage = (index: number) => {
+    setSelectedImage(index);
   };
 
   const handleAddToCart = async () => {
@@ -203,15 +227,23 @@ export default function ItemDetailPage() {
       // Add item to cart with real localStorage persistence
       addItem(product, quantity, cartAddons, cartOptions, comments.trim() || undefined);
       
-      // Show success feedback
-      alert(`تم إضافة ${product.productName} إلى السلة!\nالكمية: ${quantity}\nالسعر الإجمالي: ${formatPrice(calculateTotal())}`);
+      // Show success feedback with custom toast
+      toast.success(
+        'تم إضافة المنتج إلى السلة!',
+        `${product.productName} - الكمية: ${quantity} - المجموع: ${formatPrice(calculateTotal())}`,
+        4000
+      );
       
       // Optionally navigate to checkout or reset form
       // router.push('/user/checkout');
       
     } catch (error) {
       console.error('Error adding to cart:', error);
-      alert('حدث خطأ في إضافة المنتج إلى السلة');
+      toast.error(
+        'خطأ في إضافة المنتج',
+        'حدث خطأ في إضافة المنتج إلى السلة، يرجى المحاولة مرة أخرى',
+        5000
+      );
     } finally {
       setIsAddingToCart(false);
     }
@@ -243,73 +275,189 @@ export default function ItemDetailPage() {
 
       <div className={cn(responsive.container.lg, 'px-4 pb-8')}>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Images Section */}
+          {/* Images Section - Enhanced Slider */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
           >
-            {/* Main Image */}
-            <div className="relative h-96 rounded-3xl overflow-hidden mb-4">
-              <img
-                src={productImages[selectedImage]}
-                alt={product.productName}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  // Fallback to default image if loading fails
-                  const target = e.target as HTMLImageElement;
-                  target.src = 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=800&h=600&fit=crop';
+            {/* Main Image Slider */}
+            <div className="relative h-96 rounded-3xl overflow-hidden mb-4 group">
+              {/* Image Container with Swipe Support */}
+              <motion.div
+                className="relative w-full h-full"
+                drag={productImages.length > 1 ? "x" : false}
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.2}
+                onDragStart={() => setIsDragging(true)}
+                onDragEnd={(_, info) => {
+                  setIsDragging(false);
+                  const threshold = 50;
+                  if (info.offset.x > threshold) {
+                    prevImage();
+                  } else if (info.offset.x < -threshold) {
+                    nextImage();
+                  }
                 }}
-              />
-              
-              {/* Image Navigation */}
+                whileDrag={{ cursor: "grabbing" }}
+              >
+                <AnimatePresence mode="wait">
+                  <motion.img
+                    key={selectedImage}
+                    src={productImages[selectedImage]}
+                    alt={product.productName}
+                    className="w-full h-full object-cover"
+                    initial={{ opacity: 0, scale: 1.1 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ duration: 0.3 }}
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=800&h=600&fit=crop';
+                    }}
+                    style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+                  />
+                </AnimatePresence>
+              </motion.div>
+
+              {/* Navigation Arrows */}
               {productImages.length > 1 && (
-                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+                <>
+                  <motion.button
+                    onClick={prevImage}
+                    className={cn(
+                      'absolute left-4 top-1/2 -translate-y-1/2 z-10',
+                      'w-10 h-10 rounded-full bg-black/20 backdrop-blur-sm',
+                      'flex items-center justify-center text-white',
+                      'opacity-0 group-hover:opacity-100 transition-all duration-300',
+                      'hover:bg-black/40 active:scale-95'
+                    )}
+                    whileTap={{ scale: 0.9 }}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 0, x: 0 }}
+                    whileHover={{ opacity: 1, x: 0 }}
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </motion.button>
+
+                  <motion.button
+                    onClick={nextImage}
+                    className={cn(
+                      'absolute right-4 top-1/2 -translate-y-1/2 z-10',
+                      'w-10 h-10 rounded-full bg-black/20 backdrop-blur-sm',
+                      'flex items-center justify-center text-white',
+                      'opacity-0 group-hover:opacity-100 transition-all duration-300',
+                      'hover:bg-black/40 active:scale-95'
+                    )}
+                    whileTap={{ scale: 0.9 }}
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 0, x: 0 }}
+                    whileHover={{ opacity: 1, x: 0 }}
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </motion.button>
+                </>
+              )}
+
+              {/* Image Counter */}
+              {productImages.length > 1 && (
+                <div className="absolute top-4 right-4 z-10">
+                  <div className={cn(
+                    'px-3 py-1 rounded-full bg-black/20 backdrop-blur-sm',
+                    'text-white text-sm font-medium'
+                  )}>
+                    {selectedImage + 1} / {productImages.length}
+                  </div>
+                </div>
+              )}
+
+              {/* Dot Indicators */}
+              {productImages.length > 1 && (
+                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10">
                   <div className="flex gap-2">
                     {productImages.map((_, index) => (
-                      <button
+                      <motion.button
                         key={index}
-                        onClick={() => setSelectedImage(index)}
+                        onClick={() => goToImage(index)}
                         className={cn(
-                          'w-3 h-3 rounded-full transition-all',
+                          'w-3 h-3 rounded-full transition-all duration-300',
                           selectedImage === index
-                            ? 'bg-white'
+                            ? 'bg-white scale-110'
                             : 'bg-white/50 hover:bg-white/70'
                         )}
+                        whileTap={{ scale: 0.9 }}
+                        whileHover={{ scale: 1.1 }}
                       />
                     ))}
                   </div>
                 </div>
               )}
+
+              {/* Swipe Hint */}
+              {productImages.length > 1 && (
+                <motion.div
+                  className="absolute bottom-16 left-1/2 transform -translate-x-1/2 z-10"
+                  initial={{ opacity: 1 }}
+                  animate={{ opacity: [1, 0.5, 1] }}
+                  transition={{ duration: 2, repeat: 2, delay: 1 }}
+                >
+                  <div className={cn(
+                    'px-3 py-1 rounded-full bg-black/20 backdrop-blur-sm',
+                    'text-white text-xs font-medium'
+                  )}>
+                    اسحب للتنقل بين الصور
+                  </div>
+                </motion.div>
+              )}
             </div>
             
-            {/* Thumbnail Images */}
+            {/* Thumbnail Images - Enhanced */}
             {productImages.length > 1 && (
-              <div className="grid grid-cols-3 gap-3">
+              <motion.div 
+                className="grid grid-cols-4 md:grid-cols-5 gap-3"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+              >
                 {productImages.map((image, index) => (
-                  <button
+                  <motion.button
                     key={index}
-                    onClick={() => setSelectedImage(index)}
+                    onClick={() => goToImage(index)}
                     className={cn(
-                      'relative h-24 rounded-xl overflow-hidden transition-all',
+                      'relative h-20 rounded-xl overflow-hidden transition-all duration-300',
                       selectedImage === index
-                        ? 'ring-2 ring-orange-500'
-                        : 'hover:opacity-80'
+                        ? 'ring-2 ring-orange-500 ring-offset-2 ring-offset-white dark:ring-offset-gray-900'
+                        : 'hover:opacity-80 hover:scale-105'
                     )}
+                    whileTap={{ scale: 0.95 }}
+                    whileHover={{ scale: selectedImage === index ? 1 : 1.05 }}
                   >
                     <img
                       src={image}
                       alt={`${product.productName} ${index + 1}`}
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        // Fallback to default image if loading fails
                         const target = e.target as HTMLImageElement;
                         target.src = 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=800&h=600&fit=crop';
                       }}
                     />
-                  </button>
+                    
+                    {/* Selected Overlay */}
+                    {selectedImage === index && (
+                      <motion.div
+                        className="absolute inset-0 bg-orange-500/20 flex items-center justify-center"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <div className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center">
+                          <Check className="w-3 h-3 text-white" />
+                        </div>
+                      </motion.div>
+                    )}
+                  </motion.button>
                 ))}
-              </div>
+              </motion.div>
             )}
           </motion.div>
 
@@ -376,14 +524,14 @@ export default function ItemDetailPage() {
                       'text-lg text-gray-500 line-through',
                       theme.text.secondary
                     )}>
-                      {formatPrice(product.productPrice)}
+                      {formatPrice(originalPrice)}
                     </span>
                   )}
                 </div>
                 
                 {hasDiscount && (
                   <p className="text-sm text-red-600 dark:text-red-400 mt-1">
-                    توفير {formatPrice(product.productPrice - displayPrice)}
+                    توفير {formatPrice(originalPrice - displayPrice)}
                   </p>
                 )}
               </div>

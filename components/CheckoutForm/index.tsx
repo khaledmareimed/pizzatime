@@ -15,9 +15,20 @@ interface CheckoutFormProps {
   onSubmit: (formData: FormData) => void;
   isSubmitting?: boolean;
   selectedAddress?: any;
+  deliveryMethod?: 'delivery' | 'pickup';
+  pickupInfo?: {
+    fullName: string;
+    phone: string;
+  };
 }
 
-export default function CheckoutForm({ onSubmit, isSubmitting = false, selectedAddress }: CheckoutFormProps) {
+export default function CheckoutForm({ 
+  onSubmit, 
+  isSubmitting = false, 
+  selectedAddress, 
+  deliveryMethod = 'delivery',
+  pickupInfo = { fullName: '', phone: '' }
+}: CheckoutFormProps) {
   const [formData, setFormData] = useState<FormData>({
     notes: ''
   });
@@ -87,6 +98,25 @@ export default function CheckoutForm({ onSubmit, isSubmitting = false, selectedA
             </>
           )}
         </Button>
+
+        {/* Helper text based on delivery method */}
+        {!isSubmitting && (
+          <div className={cn('text-center text-sm', theme.text.secondary)}>
+            {deliveryMethod === 'delivery' ? (
+              !selectedAddress ? (
+                <p>يرجى اختيار عنوان التوصيل أولاً</p>
+              ) : (
+                <p>✅ جاهز للإرسال</p>
+              )
+            ) : (
+              (!pickupInfo.fullName.trim() || !pickupInfo.phone.trim()) ? (
+                <p>يرجى إكمال معلومات الاستلام أولاً</p>
+              ) : (
+                <p>✅ جاهز للإرسال</p>
+              )
+            )}
+          </div>
+        )}
       </form>
     </Card>
   );

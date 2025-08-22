@@ -197,8 +197,6 @@ export default function AddressForm({
 
     if (!formData.phone.trim()) {
       newErrors.phone = 'رقم الهاتف مطلوب';
-    } else if (!/^[\+]?[0-9\s\-\(\)]{10,15}$/.test(formData.phone.trim())) {
-      newErrors.phone = 'رقم الهاتف غير صحيح';
     }
 
     if (!formData.addressDetails.trim()) {
@@ -312,16 +310,16 @@ export default function AddressForm({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm overflow-y-auto"
+        className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm overflow-y-auto"
         onClick={onClose}
       >
-        <div className="min-h-full flex items-center justify-center p-4 py-8">
+        <div className="min-h-full flex items-center justify-center p-4 py-8 pb-24 sm:pb-8">
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md max-h-[90vh] overflow-y-auto"
+            className="w-full max-w-md max-h-[85vh] sm:max-h-[90vh] overflow-y-auto"
           >
           <Card className="p-4 sm:p-6 my-4">
             {/* Header */}
@@ -521,7 +519,7 @@ export default function AddressForm({
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => handleInputChange('phone', e.target.value)}
-                    placeholder="+966 50 123 4567"
+                    placeholder="0797758060"
                     className={cn(
                       'w-full pr-10 pl-4 py-3 rounded-xl border focus:ring-2 focus:ring-orange-500 transition-colors',
                       theme.background.card,
