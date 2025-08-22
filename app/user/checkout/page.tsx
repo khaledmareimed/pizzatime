@@ -281,7 +281,6 @@ export default function CheckoutPage() {
       if (response.ok && result.success) {
         setCurrentDeliveryFee(result.deliveryPrice);
         console.log(`✅ Delivery price: ${result.deliveryPrice} JOD`);
-        toast.success(`تكلفة التوصيل: ${result.deliveryPrice.toFixed(2)} د.أ`);
         return result.deliveryPrice;
       } else {
         console.error(`❌ Failed to get delivery price: ${result.error}`);

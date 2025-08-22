@@ -177,7 +177,7 @@ export default function ItemDetailPage() {
     );
     
     if (missingRequiredOptions.length > 0) {
-      alert(`يرجى اختيار: ${missingRequiredOptions.map(opt => opt.optionTitle).join(', ')}`);
+      toast.error('يرجى اختيار الخيارات المطلوبة', `يرجى اختيار: ${missingRequiredOptions.map(opt => opt.optionTitle).join(', ')}`);
       return;
     }
     

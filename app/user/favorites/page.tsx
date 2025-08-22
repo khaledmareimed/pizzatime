@@ -8,6 +8,7 @@ import Image from 'next/image';
 import { Heart, ShoppingCart, Star, Trash2, Loader } from 'lucide-react';
 import { cn } from '../../../funcs/utils';
 import { theme, responsive } from '../../../funcs/responsive';
+import { formatJordanCurrency } from '../../../funcs/jordanLocale';
 import { Product } from '../../../funcs/collections/product';
 import { useCartContext } from '../../../funcs/contexts/CartContext';
 import { useFavorites } from '../../../funcs/contexts/FavoritesContext';
@@ -268,11 +269,11 @@ export default function FavoritesPage() {
                               responsive.fontSize.lg,
                               'text-orange-600 dark:text-orange-400'
                             )}>
-                              {displayPrice} ر.س
+                              {formatJordanCurrency(displayPrice)}
                             </span>
                             {hasDiscount && (
                               <span className="text-sm text-gray-500 line-through">
-                                {item.productPrice} ر.س
+                                {formatJordanCurrency(item.productPrice)}
                               </span>
                             )}
                           </div>

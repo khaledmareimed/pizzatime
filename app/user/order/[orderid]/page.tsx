@@ -9,7 +9,7 @@ import { theme, responsive } from '../../../../funcs/responsive';
 import Card from '../../../../components/Card';
 import Button from '../../../../components/Button';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getJordanTime } from '../../../../funcs/jordanLocale';
+import { getJordanTime, formatJordanCurrency, formatJordanDateTime } from '../../../../funcs/jordanLocale';
 import { useToastContext } from '../../../../funcs/contexts/ToastContext';
 
 interface OrderItem {
@@ -328,13 +328,7 @@ export default function OrderDetailsPage() {
               طلب #{order.orderId}
             </h1>
             <p className={cn('text-sm', theme.text.secondary)}>
-              {new Date(order.orderDate).toLocaleDateString('ar-SA', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
+              {formatJordanDateTime(order.orderDate)}
             </p>
           </div>
         </div>
@@ -425,7 +419,7 @@ export default function OrderDetailsPage() {
                               key={addonIndex}
                               className={cn('text-xs', theme.text.secondary)}
                             >
-                              {addon.name} (+{addon.price.toFixed(2)} ر.س)
+                              {addon.name} (+{formatJordanCurrency(addon.price)})
                               {addonIndex < item.addons.length - 1 && ', '}
                             </span>
                           ))}
@@ -444,7 +438,7 @@ export default function OrderDetailsPage() {
                               className={cn('text-xs', theme.text.secondary)}
                             >
                               {option.optionTitle}: {option.choiceName}
-                              {option.choicePrice > 0 && ` (+${option.choicePrice.toFixed(2)} ر.س)`}
+                              {option.choicePrice > 0 && ` (+${formatJordanCurrency(option.choicePrice)})`}
                               {optionIndex < item.options.length - 1 && ', '}
                             </span>
                           ))}
@@ -465,7 +459,7 @@ export default function OrderDetailsPage() {
                         {((item.price + 
                           item.addons.reduce((sum, addon) => sum + addon.price, 0) +
                           item.options.reduce((sum, option) => sum + option.choicePrice, 0)
-                        ) * item.quantity).toFixed(2)} ر.س
+                        ) * item.quantity)}
                       </p>
                     </div>
                   </div>
@@ -539,7 +533,7 @@ export default function OrderDetailsPage() {
                     رمز القسيمة: {order.coupon.code}
                   </p>
                   <p className={cn('text-sm font-bold text-green-800 dark:text-green-300')}>
-                    خصم: {order.coupon.discountAmount.toFixed(2)} ر.س
+                    خصم: {formatJordanCurrency(order.coupon.discountAmount)}
                   </p>
                 </div>
               </Card>
@@ -553,41 +547,41 @@ export default function OrderDetailsPage() {
               <div className={cn('space-y-2 text-sm', theme.text.secondary)}>
                 <div className="flex justify-between">
                   <span>المجموع الفرعي:</span>
-                  <span>{order.orderSummary.subtotal.toFixed(2)} ر.س</span>
+                  <span>{formatJordanCurrency(order.orderSummary.subtotal)}</span>
                 </div>
                 {order.orderSummary.addonsTotal > 0 && (
                   <div className="flex justify-between">
                     <span>الإضافات:</span>
-                    <span>{order.orderSummary.addonsTotal.toFixed(2)} ر.س</span>
+                    <span>{formatJordanCurrency(order.orderSummary.addonsTotal)}</span>
                   </div>
                 )}
                 {order.orderSummary.optionsTotal > 0 && (
                   <div className="flex justify-between">
                     <span>الخيارات:</span>
-                    <span>{order.orderSummary.optionsTotal.toFixed(2)} ر.س</span>
+                    <span>{formatJordanCurrency(order.orderSummary.optionsTotal)}</span>
                   </div>
                 )}
                 {order.orderSummary.couponDiscount > 0 && (
                   <div className="flex justify-between text-green-600 dark:text-green-400">
                     <span>خصم القسيمة:</span>
-                    <span>-{order.orderSummary.couponDiscount.toFixed(2)} ر.س</span>
+                    <span>-{formatJordanCurrency(order.orderSummary.couponDiscount)}</span>
                   </div>
                 )}
                 {order.orderSummary.manualDiscount > 0 && (
                   <div className="flex justify-between text-orange-600 dark:text-orange-400">
                     <span>خصم إداري:</span>
-                    <span>-{order.orderSummary.manualDiscount.toFixed(2)} ر.س</span>
+                    <span>-{formatJordanCurrency(order.orderSummary.manualDiscount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between">
                   <span>رسوم التوصيل:</span>
-                  <span>{order.orderSummary.deliveryFee.toFixed(2)} ر.س</span>
+                  <span>{formatJordanCurrency(order.orderSummary.deliveryFee)}</span>
                 </div>
                 <hr className={cn('my-2', theme.border.primary)} />
                 <div className={cn('flex justify-between font-bold text-lg', theme.text.primary)}>
                   <span>المجموع الكلي:</span>
                   <span className="text-green-600 dark:text-green-400">
-                    {order.orderSummary.total.toFixed(2)} ر.س
+                    {formatJordanCurrency(order.orderSummary.total)}
                   </span>
                 </div>
               </div>

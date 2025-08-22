@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../../funcs/utils';
 import { theme, responsive } from '../../../funcs/responsive';
+import { formatJordanDate } from '../../../funcs/jordanLocale';
 import { User as UserType, UserAddress } from '../../../funcs/collections/user';
 import { useToastContext } from '../../../funcs/contexts/ToastContext';
 import Card from '../../../components/Card';
@@ -386,7 +387,7 @@ export default function ProfilePage() {
                     {userData?.role === 'admin' ? 'مدير' : 'عضو'}
                   </p>
                   <p className={cn('text-xs', theme.text.secondary)}>
-                    عضو منذ {userData?.dateJoined ? new Date(userData.dateJoined).toLocaleDateString('ar-SA') : 'غير محدد'}
+                    عضو منذ {userData?.dateJoined ? formatJordanDate(userData.dateJoined) : 'غير محدد'}
                   </p>
                 </div>
               </div>

@@ -9,13 +9,15 @@ export const JORDAN_TIMEZONE = 'Asia/Amman'
 export const JORDAN_LOCALE = 'ar-JO'
 
 /**
- * Format date and time for Jordan timezone
+ * Format date and time for Jordan timezone with Gregorian calendar and Western Arabic numerals
  */
 export function formatJordanDateTime(dateString: string | Date, options?: Intl.DateTimeFormatOptions): string {
   const date = typeof dateString === 'string' ? new Date(dateString) : dateString
   
   const defaultOptions: Intl.DateTimeFormatOptions = {
     timeZone: JORDAN_TIMEZONE,
+    calendar: 'gregory', // Explicitly use Gregorian calendar
+    numberingSystem: 'latn', // Use Western Arabic numerals (0123456789)
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -25,45 +27,48 @@ export function formatJordanDateTime(dateString: string | Date, options?: Intl.D
     ...options
   }
   
-  return date.toLocaleString(JORDAN_LOCALE, defaultOptions)
+  return date.toLocaleString('ar-JO', defaultOptions)
 }
 
 /**
- * Format date only for Jordan timezone (Gregorian calendar)
+ * Format date only for Jordan timezone (Gregorian calendar with Western Arabic numerals)
  */
 export function formatJordanDate(dateString: string | Date, options?: Intl.DateTimeFormatOptions): string {
   const date = typeof dateString === 'string' ? new Date(dateString) : dateString
   
   const defaultOptions: Intl.DateTimeFormatOptions = {
     timeZone: JORDAN_TIMEZONE,
+    calendar: 'gregory', // Explicitly use Gregorian calendar
     year: 'numeric',
     month: 'long',
     day: 'numeric',
+    numberingSystem: 'latn', // Use Western Arabic numerals (0123456789)
     ...options
   }
   
-  return date.toLocaleDateString(JORDAN_LOCALE, defaultOptions)
+  return date.toLocaleDateString('ar-JO', defaultOptions)
 }
 
 /**
- * Format time only for Jordan timezone
+ * Format time only for Jordan timezone with Western Arabic numerals
  */
 export function formatJordanTime(dateString: string | Date, options?: Intl.DateTimeFormatOptions): string {
   const date = typeof dateString === 'string' ? new Date(dateString) : dateString
   
   const defaultOptions: Intl.DateTimeFormatOptions = {
     timeZone: JORDAN_TIMEZONE,
+    numberingSystem: 'latn', // Use Western Arabic numerals (0123456789)
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
     ...options
   }
   
-  return date.toLocaleTimeString(JORDAN_LOCALE, defaultOptions)
+  return date.toLocaleTimeString('ar-JO', defaultOptions)
 }
 
 /**
- * Format currency in Jordanian Dinar
+ * Format currency in Jordanian Dinar with Western Arabic numerals and د.أ symbol
  */
 export function formatJordanCurrency(amount: number | undefined | null, options?: Intl.NumberFormatOptions): string {
   // Handle undefined, null, or invalid values
@@ -71,15 +76,17 @@ export function formatJordanCurrency(amount: number | undefined | null, options?
     amount = 0
   }
   
-  const defaultOptions: Intl.NumberFormatOptions = {
-    style: 'currency',
-    currency: 'JOD',
+  // Format the number with Western Arabic numerals (0123456789)
+  const formattedNumber = amount.toLocaleString('ar-JO', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 3,
+    useGrouping: true,
+    numberingSystem: 'latn', // Use Western Arabic numerals
     ...options
-  }
+  })
   
-  return amount.toLocaleString(JORDAN_LOCALE, defaultOptions)
+  // Add the Arabic currency symbol
+  return `${formattedNumber} د.أ`
 }
 
 /**
@@ -144,13 +151,15 @@ export function getJordanTime(): Date {
 }
 
 /**
- * Format short date for Jordan (DD/MM/YYYY)
+ * Format short date for Jordan (DD/MM/YYYY) with Western Arabic numerals
  */
 export function formatJordanShortDate(dateString: string | Date): string {
   const date = typeof dateString === 'string' ? new Date(dateString) : dateString
   
-  return date.toLocaleDateString(JORDAN_LOCALE, {
+  return date.toLocaleDateString('ar-JO', {
     timeZone: JORDAN_TIMEZONE,
+    calendar: 'gregory',
+    numberingSystem: 'latn', // Use Western Arabic numerals (0123456789)
     day: '2-digit',
     month: '2-digit',
     year: 'numeric'
@@ -158,13 +167,14 @@ export function formatJordanShortDate(dateString: string | Date): string {
 }
 
 /**
- * Format business hours time (for restaurant)
+ * Format business hours time (for restaurant) with Western Arabic numerals
  */
 export function formatBusinessTime(dateString: string | Date): string {
   const date = typeof dateString === 'string' ? new Date(dateString) : dateString
   
-  return date.toLocaleTimeString(JORDAN_LOCALE, {
+  return date.toLocaleTimeString('ar-JO', {
     timeZone: JORDAN_TIMEZONE,
+    numberingSystem: 'latn', // Use Western Arabic numerals (0123456789)
     hour: '2-digit',
     minute: '2-digit',
     hour12: true
