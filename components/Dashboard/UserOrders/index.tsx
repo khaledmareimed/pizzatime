@@ -248,7 +248,7 @@ export default function AdminUserOrders({ session, userId }: AdminUserOrdersProp
   }
 
   const handleOrderClick = (order: Order) => {
-    router.push(`/dash/user/${order.userId}/order/${order.orderId}`)
+    router.push(`/dash/user/${order.userId || 'unknown'}/order/${order.orderId || order._id}`)
   }
 
   const getStatusIcon = (status: string) => {
@@ -413,7 +413,7 @@ export default function AdminUserOrders({ session, userId }: AdminUserOrdersProp
                             <div className="flex-1">
                               <div className="flex items-center space-x-4 rtl:space-x-reverse mb-2">
                                 <h3 className={cn('font-bold text-gray-900 dark:text-white', theme.text.primary)}>
-                                  طلب #{order.orderId.slice(-6)}
+                                  طلب #{(order.orderId || order._id || 'غير محدد').toString().slice(-6)}
                                 </h3>
                                 <span className={cn('px-2 py-1 rounded-lg text-xs font-medium text-white', statusColor)}>
                                   {getStatusText(order.status)}
@@ -431,14 +431,14 @@ export default function AdminUserOrders({ session, userId }: AdminUserOrdersProp
                                 <div className="flex items-center space-x-2 rtl:space-x-reverse">
                                   <DollarSign className="w-4 h-4 text-gray-400" />
                                   <span className={cn('font-medium text-gray-900 dark:text-white', theme.text.primary)}>
-                                    {formatJordanCurrency(order.orderSummary.total)}
+                                    {formatJordanCurrency(order.orderSummary?.total || 0)}
                                   </span>
                                 </div>
                                 
                                 <div className="flex items-center space-x-2 rtl:space-x-reverse">
                                   <Package className="w-4 h-4 text-gray-400" />
                                   <span className={cn('text-gray-600 dark:text-gray-400', theme.text.secondary)}>
-                                    {order.items.length} منتج
+                                    {order.items?.length || 0} منتج
                                   </span>
                                 </div>
                                 

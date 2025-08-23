@@ -11,8 +11,18 @@ export const JORDAN_LOCALE = 'ar-JO'
 /**
  * Format date and time for Jordan timezone with Gregorian calendar and Western Arabic numerals
  */
-export function formatJordanDateTime(dateString: string | Date, options?: Intl.DateTimeFormatOptions): string {
+export function formatJordanDateTime(dateString: string | Date | null | undefined, options?: Intl.DateTimeFormatOptions): string {
+  // Handle null, undefined, or invalid dates
+  if (!dateString) {
+    return 'غير محدد' // "Not specified" in Arabic
+  }
+  
   const date = typeof dateString === 'string' ? new Date(dateString) : dateString
+  
+  // Check if the date is valid
+  if (isNaN(date.getTime())) {
+    return 'تاريخ غير صحيح' // "Invalid date" in Arabic
+  }
   
   const defaultOptions: Intl.DateTimeFormatOptions = {
     timeZone: JORDAN_TIMEZONE,
@@ -33,8 +43,18 @@ export function formatJordanDateTime(dateString: string | Date, options?: Intl.D
 /**
  * Format date only for Jordan timezone (Gregorian calendar with Western Arabic numerals)
  */
-export function formatJordanDate(dateString: string | Date, options?: Intl.DateTimeFormatOptions): string {
+export function formatJordanDate(dateString: string | Date | null | undefined, options?: Intl.DateTimeFormatOptions): string {
+  // Handle null, undefined, or invalid dates
+  if (!dateString) {
+    return 'غير محدد' // "Not specified" in Arabic
+  }
+  
   const date = typeof dateString === 'string' ? new Date(dateString) : dateString
+  
+  // Check if the date is valid
+  if (isNaN(date.getTime())) {
+    return 'تاريخ غير صحيح' // "Invalid date" in Arabic
+  }
   
   const defaultOptions: Intl.DateTimeFormatOptions = {
     timeZone: JORDAN_TIMEZONE,
@@ -52,8 +72,18 @@ export function formatJordanDate(dateString: string | Date, options?: Intl.DateT
 /**
  * Format time only for Jordan timezone with Western Arabic numerals
  */
-export function formatJordanTime(dateString: string | Date, options?: Intl.DateTimeFormatOptions): string {
+export function formatJordanTime(dateString: string | Date | null | undefined, options?: Intl.DateTimeFormatOptions): string {
+  // Handle null, undefined, or invalid dates
+  if (!dateString) {
+    return 'غير محدد' // "Not specified" in Arabic
+  }
+  
   const date = typeof dateString === 'string' ? new Date(dateString) : dateString
+  
+  // Check if the date is valid
+  if (isNaN(date.getTime())) {
+    return 'وقت غير صحيح' // "Invalid time" in Arabic
+  }
   
   const defaultOptions: Intl.DateTimeFormatOptions = {
     timeZone: JORDAN_TIMEZONE,
@@ -92,8 +122,19 @@ export function formatJordanCurrency(amount: number | undefined | null, options?
 /**
  * Format relative time (time ago) in Arabic for Jordan
  */
-export function formatJordanTimeAgo(dateString: string | Date): string {
+export function formatJordanTimeAgo(dateString: string | Date | null | undefined): string {
+  // Handle null, undefined, or invalid dates
+  if (!dateString) {
+    return 'غير محدد' // "Not specified" in Arabic
+  }
+  
   const date = typeof dateString === 'string' ? new Date(dateString) : dateString
+  
+  // Check if the date is valid
+  if (isNaN(date.getTime())) {
+    return 'تاريخ غير صحيح' // "Invalid date" in Arabic
+  }
+  
   const now = new Date()
   
   // Convert both dates to Jordan timezone for accurate comparison
@@ -153,8 +194,18 @@ export function getJordanTime(): Date {
 /**
  * Format short date for Jordan (DD/MM/YYYY) with Western Arabic numerals
  */
-export function formatJordanShortDate(dateString: string | Date): string {
+export function formatJordanShortDate(dateString: string | Date | null | undefined): string {
+  // Handle null, undefined, or invalid dates
+  if (!dateString) {
+    return 'غير محدد' // "Not specified" in Arabic
+  }
+  
   const date = typeof dateString === 'string' ? new Date(dateString) : dateString
+  
+  // Check if the date is valid
+  if (isNaN(date.getTime())) {
+    return 'تاريخ غير صحيح' // "Invalid date" in Arabic
+  }
   
   return date.toLocaleDateString('ar-JO', {
     timeZone: JORDAN_TIMEZONE,
@@ -169,8 +220,18 @@ export function formatJordanShortDate(dateString: string | Date): string {
 /**
  * Format business hours time (for restaurant) with Western Arabic numerals
  */
-export function formatBusinessTime(dateString: string | Date): string {
+export function formatBusinessTime(dateString: string | Date | null | undefined): string {
+  // Handle null, undefined, or invalid dates
+  if (!dateString) {
+    return 'غير محدد' // "Not specified" in Arabic
+  }
+  
   const date = typeof dateString === 'string' ? new Date(dateString) : dateString
+  
+  // Check if the date is valid
+  if (isNaN(date.getTime())) {
+    return 'وقت غير صحيح' // "Invalid time" in Arabic
+  }
   
   return date.toLocaleTimeString('ar-JO', {
     timeZone: JORDAN_TIMEZONE,

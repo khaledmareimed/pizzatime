@@ -278,7 +278,7 @@ export default function POSOrdersPage() {
                   <div>
                     <h4 className="font-medium text-gray-900 dark:text-white mb-2">ملخص الطلب</h4>
                     <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
-                      <p>عدد الأصناف: {order.items.length}</p>
+                      <p>عدد الأصناف: {order.items?.length || 0}</p>
                       <p>الإجمالي: {order.orderSummary.total.toFixed(2)} ر.س</p>
                       {order.orderSummary.deliveryFee > 0 && (
                         <p>رسوم التوصيل: {order.orderSummary.deliveryFee.toFixed(2)} ر.س</p>
@@ -297,7 +297,7 @@ export default function POSOrdersPage() {
                 <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                   <h4 className="font-medium text-gray-900 dark:text-white mb-2">الأصناف</h4>
                   <div className="space-y-2">
-                    {order.items.map((item, index) => (
+                    {order.items?.map((item, index) => (
                       <div key={index} className="flex justify-between items-center text-sm">
                         <div>
                           <span className="text-gray-900 dark:text-white">{item.productName}</span>

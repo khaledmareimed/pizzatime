@@ -27,6 +27,7 @@ import { theme, responsive, animations } from '@/funcs/responsive'
 import { formatJordanDateTime, formatJordanCurrency } from '@/funcs/jordanLocale'
 import { useToastContext } from '@/funcs/contexts/ToastContext'
 import Button from '@/components/Button'
+import PrintButton from '@/components/PrintButton'
 import OrderEditor from '../OrderEditor'
 
 interface OrderItem {
@@ -52,17 +53,17 @@ interface OrderItem {
 
 interface Order {
   _id: string
-  userId: string
-  orderId: string
-  items: OrderItem[]
-  deliveryAddress: {
+  userId?: string
+  orderId?: string
+  items?: OrderItem[]
+  deliveryAddress?: {
     name: string
     recipientName: string
     city: string
     phone: string
     addressDetails: string
   }
-  orderSummary: {
+  orderSummary?: {
     subtotal: number
     addonsTotal: number
     optionsTotal: number
@@ -84,9 +85,9 @@ interface Order {
   notes?: string
   estimatedDeliveryTime?: string
   actualDeliveryTime?: string
-  orderDate: string
-  createdAt: string
-  updatedAt: string
+  orderDate?: string
+  createdAt?: string
+  updatedAt?: string
   isInternalOrder?: boolean
   posOrderId?: string
 }
@@ -258,18 +259,38 @@ export default function AdminOrderDetails({ session, userId, orderId }: AdminOrd
       }
 
       const updatedOrder = await response.json()
-      setOrder(updatedOrder)
+      
+      // Update the order state with the response data
+      if (updatedOrder.order) {
+        setOrder(updatedOrder.order)
+      } else {
+        setOrder(prev => prev ? { ...prev, status: newStatus, paymentStatus: newPaymentStatus, notes } : null)
+      }
+      
       setEditingStatus(false)
       setEditingPaymentStatus(false)
+      
+      // Show success message with material transaction info if available
+      let successMessage = 'تم تحديث حالة الطلب بنجاح'
+      if (updatedOrder.materialTransaction) {
+        const { action, materialsProcessed } = updatedOrder.materialTransaction
+        if (action === 'DEDUCT') {
+          successMessage += ` وتم خصم ${materialsProcessed} مادة من المخزون`
+        } else if (action === 'RESTORE') {
+          successMessage += ` وتم إرجاع ${materialsProcessed} مادة للمخزون`
+        }
+      }
+      
+      success('تم التحديث', successMessage)
     } catch (err) {
       console.error('Error updating order:', err)
-      setError('فشل في تحديث الطلب')
+      showError('خطأ في التحديث', 'فشل في تحديث حالة الطلب. يرجى المحاولة مرة أخرى.')
     } finally {
       setUpdating(false)
     }
   }
 
-  const formatDateTime = (dateString: string) => {
+  const formatDateTime = (dateString: string | undefined) => {
     return formatJordanDateTime(dateString)
   }
 
@@ -346,7 +367,7 @@ export default function AdminOrderDetails({ session, userId, orderId }: AdminOrd
             <div>
               <div className="flex items-center space-x-3 rtl:space-x-reverse mb-2">
                 <h1 className={cn('text-2xl font-bold text-gray-900 dark:text-white', theme.text.primary)}>
-                  طلب #{order.posOrderId ? order.posOrderId.slice(-6) : order.orderId.slice(-6)}
+                  طلب #{order.posOrderId ? order.posOrderId.slice(-6) : (order.orderId || order._id || 'غير محدد').toString().slice(-6)}
                 </h1>
                 {order.isInternalOrder && order.userId === 'internal' && (
                   <span className="px-3 py-1 rounded-lg text-sm font-medium bg-purple-500 text-white">
@@ -364,6 +385,7 @@ export default function AdminOrderDetails({ session, userId, orderId }: AdminOrd
           </div>
           
           <div className="flex items-center space-x-2 rtl:space-x-reverse">
+            <PrintButton order={order} />
             <Button
               onClick={() => setIsEditMode(true)}
               size="sm"
@@ -388,10 +410,10 @@ export default function AdminOrderDetails({ session, userId, orderId }: AdminOrd
             className="bg-white dark:bg-gray-800 rounded-3xl shadow-lg p-6"
           >
             <h2 className={cn('text-xl font-bold mb-6 text-gray-900 dark:text-white', theme.text.primary)}>
-              منتجات الطلب ({order.items.length})
+              منتجات الطلب ({order.items?.length || 0})
             </h2>
             <div className="space-y-4">
-              {order.items.map((item, index) => (
+              {order.items?.length ? order.items.map((item, index) => (
                 <div key={index} className="flex items-center space-x-4 rtl:space-x-reverse p-4 border border-gray-100 dark:border-gray-700 rounded-2xl">
                   {item.image && (
                     <img
@@ -429,7 +451,14 @@ export default function AdminOrderDetails({ session, userId, orderId }: AdminOrd
                     </p>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="text-center py-8">
+                  <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className={cn('text-gray-500 dark:text-gray-400', theme.text.secondary)}>
+                    لا توجد منتجات في هذا الطلب
+                  </p>
+                </div>
+              )}
             </div>
           </motion.div>
 
@@ -448,7 +477,7 @@ export default function AdminOrderDetails({ session, userId, orderId }: AdminOrd
                   <User className="w-5 h-5 text-gray-400" />
                   <div>
                     <p className={cn('font-medium text-gray-900 dark:text-white', theme.text.primary)}>
-                      {order.deliveryAddress.recipientName}
+                      {order.deliveryAddress?.recipientName || 'غير محدد'}
                     </p>
                     <p className={cn('text-sm text-gray-600 dark:text-gray-400', theme.text.secondary)}>
                       المستلم
@@ -460,7 +489,7 @@ export default function AdminOrderDetails({ session, userId, orderId }: AdminOrd
                   <Phone className="w-5 h-5 text-gray-400" />
                   <div>
                     <p className={cn('font-medium text-gray-900 dark:text-white', theme.text.primary)}>
-                      {order.deliveryAddress.phone}
+                      {order.deliveryAddress?.phone || 'غير محدد'}
                     </p>
                     <p className={cn('text-sm text-gray-600 dark:text-gray-400', theme.text.secondary)}>
                       رقم الهاتف
@@ -472,10 +501,10 @@ export default function AdminOrderDetails({ session, userId, orderId }: AdminOrd
                   <MapPin className="w-5 h-5 text-gray-400 mt-1" />
                   <div>
                     <p className={cn('font-medium text-gray-900 dark:text-white', theme.text.primary)}>
-                      {order.deliveryAddress.city}
+                      {order.deliveryAddress?.city || 'غير محدد'}
                     </p>
                     {/* Show city as location */}
-                    {order.deliveryAddress.city ? (
+                    {order.deliveryAddress?.city ? (
                       <p className={cn('text-sm text-gray-600 dark:text-gray-400', theme.text.secondary)}>
                         المدينة: {order.deliveryAddress.city}
                       </p>
@@ -485,7 +514,7 @@ export default function AdminOrderDetails({ session, userId, orderId }: AdminOrd
                       </p>
                     )}
                     <p className={cn('text-sm text-gray-600 dark:text-gray-400', theme.text.secondary)}>
-                      {order.deliveryAddress.addressDetails}
+                      {order.deliveryAddress?.addressDetails || 'غير محدد'}
                     </p>
                   </div>
                 </div>
@@ -574,51 +603,51 @@ export default function AdminOrderDetails({ session, userId, orderId }: AdminOrd
               <div className="flex justify-between">
                 <span className={cn('text-gray-600 dark:text-gray-400', theme.text.secondary)}>المجموع الفرعي</span>
                 <span className={cn('font-medium text-gray-900 dark:text-white', theme.text.primary)}>
-                  {formatJordanCurrency(order.orderSummary.subtotal)}
+                  {formatJordanCurrency(order.orderSummary?.subtotal || 0)}
                 </span>
               </div>
               
-              {order.orderSummary.addonsTotal > 0 && (
+              {(order.orderSummary?.addonsTotal || 0) > 0 && (
                 <div className="flex justify-between">
                   <span className={cn('text-gray-600 dark:text-gray-400', theme.text.secondary)}>الإضافات</span>
                   <span className={cn('font-medium text-gray-900 dark:text-white', theme.text.primary)}>
-                    {formatJordanCurrency(order.orderSummary.addonsTotal)}
+                    {formatJordanCurrency(order.orderSummary?.addonsTotal || 0)}
                   </span>
                 </div>
               )}
               
-              {order.orderSummary.optionsTotal > 0 && (
+              {(order.orderSummary?.optionsTotal || 0) > 0 && (
                 <div className="flex justify-between">
                   <span className={cn('text-gray-600 dark:text-gray-400', theme.text.secondary)}>الخيارات</span>
                   <span className={cn('font-medium text-gray-900 dark:text-white', theme.text.primary)}>
-                    {formatJordanCurrency(order.orderSummary.optionsTotal)}
+                    {formatJordanCurrency(order.orderSummary?.optionsTotal || 0)}
                   </span>
                 </div>
               )}
               
-              {order.orderSummary.deliveryFee > 0 && (
+              {(order.orderSummary?.deliveryFee || 0) > 0 && (
                 <div className="flex justify-between">
                   <span className={cn('text-gray-600 dark:text-gray-400', theme.text.secondary)}>رسوم التوصيل</span>
                   <span className={cn('font-medium text-gray-900 dark:text-white', theme.text.primary)}>
-                    {formatJordanCurrency(order.orderSummary.deliveryFee)}
+                    {formatJordanCurrency(order.orderSummary?.deliveryFee || 0)}
                   </span>
                 </div>
               )}
               
-              {order.orderSummary.couponDiscount > 0 && (
+              {(order.orderSummary?.couponDiscount || 0) > 0 && (
                 <div className="flex justify-between">
                   <span className={cn('text-gray-600 dark:text-gray-400', theme.text.secondary)}>خصم الكوبون</span>
                   <span className="font-medium text-green-600 dark:text-green-400">
-                    -{formatJordanCurrency(order.orderSummary.couponDiscount)}
+                    -{formatJordanCurrency(order.orderSummary?.couponDiscount || 0)}
                   </span>
                 </div>
               )}
               
-              {order.orderSummary.manualDiscount > 0 && (
+              {(order.orderSummary?.manualDiscount || 0) > 0 && (
                 <div className="flex justify-between">
-                  <span className={cn('text-gray-600 dark:text-gray-400', theme.text.secondary)}>الخصم الإداري</span>
+                  <span className={cn('text-gray-600 dark:text-gray-400', theme.text.secondary)}>خصم يدوي</span>
                   <span className="font-medium text-green-600 dark:text-green-400">
-                    -{formatJordanCurrency(order.orderSummary.manualDiscount)}
+                    -{formatJordanCurrency(order.orderSummary?.manualDiscount || 0)}
                   </span>
                 </div>
               )}
@@ -627,7 +656,7 @@ export default function AdminOrderDetails({ session, userId, orderId }: AdminOrd
                 <div className="flex justify-between">
                   <span className={cn('font-bold text-gray-900 dark:text-white', theme.text.primary)}>المجموع الكلي</span>
                   <span className={cn('font-bold text-xl text-gray-900 dark:text-white', theme.text.primary)}>
-                    {formatJordanCurrency(order.orderSummary.total)}
+                    {formatJordanCurrency(order.orderSummary?.total || 0)}
                   </span>
                 </div>
               </div>
@@ -665,8 +694,17 @@ export default function AdminOrderDetails({ session, userId, orderId }: AdminOrd
                     </select>
                     <div className="flex space-x-2 rtl:space-x-reverse">
                       <Button size="sm" onClick={updateOrderStatus} disabled={updating}>
-                        <Save className="w-4 h-4 mr-2 rtl:ml-2" />
-                        حفظ
+                        {updating ? (
+                          <>
+                            <div className="w-4 h-4 mr-2 rtl:ml-2 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            جاري التحديث...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="w-4 h-4 mr-2 rtl:ml-2" />
+                            حفظ
+                          </>
+                        )}
                       </Button>
                       <Button variant="outline" size="sm" onClick={() => setEditingStatus(false)}>
                         <X className="w-4 h-4 mr-2 rtl:ml-2" />
@@ -707,8 +745,17 @@ export default function AdminOrderDetails({ session, userId, orderId }: AdminOrd
                     </select>
                     <div className="flex space-x-2 rtl:space-x-reverse">
                       <Button size="sm" onClick={updateOrderStatus} disabled={updating}>
-                        <Save className="w-4 h-4 mr-2 rtl:ml-2" />
-                        حفظ
+                        {updating ? (
+                          <>
+                            <div className="w-4 h-4 mr-2 rtl:ml-2 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            جاري التحديث...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="w-4 h-4 mr-2 rtl:ml-2" />
+                            حفظ
+                          </>
+                        )}
                       </Button>
                       <Button variant="outline" size="sm" onClick={() => setEditingPaymentStatus(false)}>
                         <X className="w-4 h-4 mr-2 rtl:ml-2" />
@@ -747,7 +794,14 @@ export default function AdminOrderDetails({ session, userId, orderId }: AdminOrd
                   onClick={updateOrderStatus} 
                   disabled={updating}
                 >
-                  حفظ الملاحظات
+                  {updating ? (
+                    <>
+                      <div className="w-4 h-4 mr-2 rtl:ml-2 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      جاري التحديث...
+                    </>
+                  ) : (
+                    'حفظ الملاحظات'
+                  )}
                 </Button>
               </div>
             </div>
@@ -804,7 +858,7 @@ export default function AdminOrderDetails({ session, userId, orderId }: AdminOrd
                 <User className="w-5 h-5 text-gray-400" />
                 <div>
                   <p className={cn('font-medium text-gray-900 dark:text-white', theme.text.primary)}>
-                    {order.userId.slice(-6)}
+                    {order.userId ? order.userId.slice(-6) : 'غير محدد'}
                   </p>
                   <p className={cn('text-sm text-gray-600 dark:text-gray-400', theme.text.secondary)}>
                     معرف العميل

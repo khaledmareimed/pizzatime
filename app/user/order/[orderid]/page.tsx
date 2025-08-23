@@ -384,7 +384,7 @@ export default function OrderDetailsPage() {
                 عناصر الطلب
               </h2>
               <div className="space-y-4">
-                {order.items.map((item, index) => (
+                {order.items?.map((item, index) => (
                   <div
                     key={index}
                     className={cn(

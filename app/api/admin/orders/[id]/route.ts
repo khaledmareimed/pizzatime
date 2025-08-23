@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { createCollection, Order, OrderSchema, OrderIndexes, SystemLog, SystemLogSchema, SystemLogIndexes, User, UserSchema, UserIndexes } from '@/funcs/collections'
+import { updateMaterialUsageOnStatusChange } from '@/funcs/material-usage-controller'
 
 export async function PATCH(
   request: NextRequest,
@@ -57,6 +58,50 @@ export async function PATCH(
 
     if (!updatedOrder) {
       return NextResponse.json({ error: 'Failed to update order' }, { status: 500 })
+    }
+
+    // Handle material usage changes if order status changed
+    let materialTransactionResult = null
+    if (status && status !== existingOrder.status) {
+      try {
+        console.log(`🔄 Processing material usage for order ${updatedOrder.orderId}: ${existingOrder.status} → ${status}`)
+        
+        materialTransactionResult = await updateMaterialUsageOnStatusChange(
+          updatedOrder.orderId,
+          existingOrder.status,
+          status,
+          session.user.id || session.user.email || 'admin'
+        )
+
+        console.log(`📊 Material usage result:`, {
+          success: materialTransactionResult.success,
+          action: materialTransactionResult.action,
+          materialsProcessed: materialTransactionResult.materialsProcessed,
+          errors: materialTransactionResult.errors.length,
+          warnings: materialTransactionResult.warnings.length
+        })
+
+        // Log any material usage errors or warnings
+        if (materialTransactionResult.errors.length > 0) {
+          console.error(`❌ Material usage errors:`, materialTransactionResult.errors)
+        }
+        if (materialTransactionResult.warnings.length > 0) {
+          console.warn(`⚠️ Material usage warnings:`, materialTransactionResult.warnings)
+        }
+
+      } catch (materialError) {
+        console.error('❌ Error processing material usage:', materialError)
+        // Don't fail the order update if material processing fails
+        // This ensures order status updates are not blocked by material issues
+        materialTransactionResult = {
+          success: false,
+          materialsProcessed: 0,
+          action: 'NO_CHANGE',
+          message: `Material processing failed: ${materialError instanceof Error ? materialError.message : 'Unknown error'}`,
+          errors: [materialError instanceof Error ? materialError.message : 'Unknown material processing error'],
+          warnings: []
+        }
+      }
     }
 
     // Sync the updated order status to the user's orders array
@@ -142,7 +187,15 @@ export async function PATCH(
             previousStatus: existingOrder.status,
             newStatus: status,
             previousPaymentStatus: existingOrder.paymentStatus,
-            newPaymentStatus: paymentStatus
+            newPaymentStatus: paymentStatus,
+            materialTransaction: materialTransactionResult ? {
+              transactionId: materialTransactionResult.transactionId,
+              success: materialTransactionResult.success,
+              action: materialTransactionResult.action,
+              materialsProcessed: materialTransactionResult.materialsProcessed,
+              errors: materialTransactionResult.errors?.length || 0,
+              warnings: materialTransactionResult.warnings?.length || 0
+            } : null
           },
           ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
           userAgent: request.headers.get('user-agent')
@@ -155,7 +208,18 @@ export async function PATCH(
       // Don't fail the order update if logging fails
     }
 
-    return NextResponse.json(updatedOrder)
+    return NextResponse.json({
+      message: 'Order updated successfully',
+      order: updatedOrder,
+      materialTransaction: materialTransactionResult ? {
+        success: materialTransactionResult.success,
+        action: materialTransactionResult.action,
+        materialsProcessed: materialTransactionResult.materialsProcessed,
+        message: materialTransactionResult.message,
+        errors: materialTransactionResult.errors,
+        warnings: materialTransactionResult.warnings
+      } : null
+    })
 
   } catch (error) {
     console.error('Error updating order:', error)

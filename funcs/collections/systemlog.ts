@@ -24,9 +24,11 @@ export const SystemLogSchema = {
       'user_order_created',
       'user_order_cancelled',
       'user_order_updated',
+      'admin_order_pending',
       'admin_order_confirmed',
       'admin_order_preparing',
       'admin_order_ready',
+      'admin_order_out-for-delivery',
       'admin_order_delivered',
       'admin_order_cancelled',
       'user_login',
@@ -63,9 +65,9 @@ export interface SystemLog extends BaseDocument {
   userId: string
   orderId?: string
   action: 'user_order_created' | 'user_order_cancelled' | 'user_order_updated' | 
-          'admin_order_confirmed' | 'admin_order_preparing' | 'admin_order_ready' | 
-          'admin_order_delivered' | 'admin_order_cancelled' | 'user_login' | 
-          'user_logout' | 'user_registered' | 'product_added_to_cart' | 
+          'admin_order_pending' | 'admin_order_confirmed' | 'admin_order_preparing' | 'admin_order_ready' | 
+          'admin_order_out-for-delivery' | 'admin_order_delivered' | 'admin_order_cancelled' | 
+          'user_login' | 'user_logout' | 'user_registered' | 'product_added_to_cart' | 
           'product_removed_from_cart' | 'cart_cleared' | 'address_added' | 
           'address_updated' | 'address_deleted' | 'favorite_added' | 'favorite_removed'
   description: string

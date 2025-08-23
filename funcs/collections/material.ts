@@ -76,7 +76,7 @@ const MaterialPurchaseSchema = new Schema({
 
 // Material Usage Schema
 const MaterialUsageSchema = new Schema({
-  quantity: { type: Number, required: true, min: 0 },
+  quantity: { type: Number, required: true }, // Removed min: 0 to allow negative quantities for restoration
   usageDate: { type: Date, required: true },
   purpose: { 
     type: String, 
@@ -114,8 +114,8 @@ export const RawMaterialSchema = new Schema({
   currentStock: { 
     type: Number, 
     required: true, 
-    default: 0,
-    min: 0
+    default: 0
+    // Removed min: 0 to allow negative stock in emergency situations
   },
   minimumStock: { 
     type: Number, 
@@ -206,21 +206,52 @@ RawMaterialSchema.methods.addPurchase = function(purchaseData: Omit<MaterialPurc
     ...purchaseData,
     createdAt: new Date()
   })
-  this.currentStock = this.calculateCurrentStock()
+  
+  // Directly add to current stock instead of recalculating
+  this.currentStock += purchaseData.quantity
+  this.updatedAt = new Date()
   return this.save()
 }
 
 RawMaterialSchema.methods.addUsage = function(usageData: Omit<MaterialUsage, '_id' | 'createdAt'>) {
-  if (usageData.quantity > this.currentStock) {
-    throw new Error('Insufficient stock for this usage')
+  // Allow negative stock but warn about it (only for positive quantities)
+  if (usageData.quantity > 0 && usageData.quantity > this.currentStock) {
+    console.warn(`⚠️ Usage will result in negative stock for ${this.name}. Current: ${this.currentStock}, Usage: ${usageData.quantity}`)
   }
   
   this.usages.push({
     ...usageData,
     createdAt: new Date()
   })
-  this.currentStock = this.calculateCurrentStock()
+  
+  // Directly subtract from current stock (works for both positive and negative quantities)
+  this.currentStock -= usageData.quantity
+  this.updatedAt = new Date()
   return this.save()
+}
+
+// Method to sync currentStock with calculated stock from purchases/usages
+RawMaterialSchema.methods.syncCurrentStock = function() {
+  const calculatedStock = this.calculateCurrentStock()
+  if (this.currentStock !== calculatedStock) {
+    console.log(`🔄 Syncing stock for ${this.name}: ${this.currentStock} → ${calculatedStock}`)
+    this.currentStock = calculatedStock
+    this.updatedAt = new Date()
+  }
+  return this
+}
+
+// Method to validate and fix stock inconsistencies
+RawMaterialSchema.methods.validateStock = function() {
+  const calculatedStock = this.calculateCurrentStock()
+  const isConsistent = this.currentStock === calculatedStock
+  
+  return {
+    isConsistent,
+    currentStock: this.currentStock,
+    calculatedStock,
+    difference: this.currentStock - calculatedStock
+  }
 }
 
 // Export the schema as default and named export

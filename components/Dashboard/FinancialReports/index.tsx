@@ -882,7 +882,7 @@ export default function FinancialReports({ session }: FinancialReportsProps) {
                   <tr key={order._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={cn('text-sm font-medium text-gray-900 dark:text-white', theme.text.primary)}>
-                        #{order.orderId.slice(-6)}
+                        #{(order.orderId || order._id || 'غير محدد').toString().slice(-6)}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -897,13 +897,13 @@ export default function FinancialReports({ session }: FinancialReportsProps) {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={cn('text-sm font-medium text-gray-900 dark:text-white', theme.text.primary)}>
-                        {formatJordanCurrency(order.orderSummary.total)}
+                        {formatJordanCurrency(order.orderSummary?.total || 0)}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <select
                         value={order.paymentStatus}
-                        onChange={(e) => handleUpdatePaymentStatus(order.orderId, e.target.value)}
+                        onChange={(e) => handleUpdatePaymentStatus(order.orderId || order._id || '', e.target.value)}
                         className={cn(
                           'text-xs font-medium rounded-lg px-2 py-1 border-0',
                           order.paymentStatus === 'paid' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
@@ -932,7 +932,7 @@ export default function FinancialReports({ session }: FinancialReportsProps) {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => window.open(`/dash/user/${order.userId}/order/${order.orderId}`, '_blank')}
+                        onClick={() => window.open(`/dash/user/${order.userId || 'unknown'}/order/${order.orderId || order._id}`, '_blank')}
                       >
                         <Eye className="w-4 h-4 mr-2 rtl:ml-2" />
                         عرض

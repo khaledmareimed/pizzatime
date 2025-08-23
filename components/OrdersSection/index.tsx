@@ -238,8 +238,8 @@ export default function OrdersSection({ shouldFetch = true, onDataLoaded }: Orde
         <div className="space-y-4">
           {orders.map((order) => (
             <div
-              key={order.orderId}
-              onClick={() => handleOrderClick(order.orderId)}
+              key={order.orderId || order._id}
+              onClick={() => handleOrderClick(order.orderId || order._id || '')}
               className={cn(
                 'p-4 rounded-xl border transition-all cursor-pointer',
                 theme.background.card,
@@ -253,7 +253,7 @@ export default function OrdersSection({ shouldFetch = true, onDataLoaded }: Orde
                     'font-medium',
                     theme.text.primary
                   )}>
-                    طلب #{order.orderId}
+                    طلب #{order.orderId || order._id || 'غير محدد'}
                   </h3>
                   <p className={cn(
                     'text-sm',
@@ -276,7 +276,7 @@ export default function OrdersSection({ shouldFetch = true, onDataLoaded }: Orde
                     'text-sm',
                     theme.text.secondary
                   )}>
-                    {order.items.length} عنصر
+                    {order.items?.length || 0} عنصر
                   </p>
                   {order.coupon && (
                     <p className="text-xs text-green-600 dark:text-green-400">
@@ -288,7 +288,7 @@ export default function OrdersSection({ shouldFetch = true, onDataLoaded }: Orde
                   <p className={cn(
                     'font-bold text-lg text-green-600 dark:text-green-400'
                   )}>
-                    {formatJordanCurrency(order.orderSummary.total)}
+                    {formatJordanCurrency(order.orderSummary?.total || 0)}
                   </p>
                   <p className={cn(
                     'text-xs',

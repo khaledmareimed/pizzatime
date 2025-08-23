@@ -226,7 +226,7 @@ export default function AdminOrdersManagement({ session }: AdminOrdersManagement
   }
 
   const handleOrderClick = (order: Order) => {
-    router.push(`/dash/user/${order.userId}/order/${order.orderId}`)
+    router.push(`/dash/user/${order.userId || 'unknown'}/order/${order.orderId || order._id}`)
   }
 
   const formatTimeAgo = (dateString: string) => {
@@ -441,7 +441,7 @@ export default function AdminOrdersManagement({ session }: AdminOrdersManagement
                             <div className="flex-1">
                               <div className="flex items-center space-x-4 rtl:space-x-reverse mb-2">
                                 <h3 className={cn('font-bold text-gray-900 dark:text-white', theme.text.primary)}>
-                                  طلب #{order.posOrderId ? order.posOrderId.slice(-6) : order.orderId.slice(-6)}
+                                  طلب #{order.posOrderId ? order.posOrderId.slice(-6) : (order.orderId || order._id || 'غير محدد').toString().slice(-6)}
                                 </h3>
                                 {/* Show POS badge only for POS orders */}
                                 {order.isInternalOrder && order.userId === 'internal' && (
@@ -472,7 +472,7 @@ export default function AdminOrdersManagement({ session }: AdminOrdersManagement
                                 <div className="flex items-center space-x-2 rtl:space-x-reverse">
                                   <DollarSign className="w-4 h-4 text-gray-400" />
                                   <span className={cn('font-medium text-gray-900 dark:text-white', theme.text.primary)}>
-                                    {formatJordanCurrency(order.orderSummary.total)}
+                                    {formatJordanCurrency(order.orderSummary?.total || 0)}
                                   </span>
                                 </div>
                                 
@@ -486,7 +486,7 @@ export default function AdminOrdersManagement({ session }: AdminOrdersManagement
                               
                               <div className="mt-2 text-xs">
                                 <span className={cn('text-gray-500 dark:text-gray-500', theme.text.secondary)}>
-                                  {order.items.length} منتج • {paymentMethodTranslations[order.paymentMethod]} • {deliveryMethodTranslations[order.deliveryMethod]}
+                                  {order.items?.length || 0} منتج • {paymentMethodTranslations[order.paymentMethod]} • {deliveryMethodTranslations[order.deliveryMethod]}
                                   {order.isInternalOrder && order.userId === 'internal' && (
                                     <span className="text-purple-600 dark:text-purple-400 font-medium"> • طلب من نقاط البيع</span>
                                   )}

@@ -203,6 +203,7 @@ export async function PUT(
 
         orderFound = true
         console.log('✅ Order updated in orders collection')
+        
       }
     } catch (error) {
       console.error('Error updating order in orders collection:', error)
