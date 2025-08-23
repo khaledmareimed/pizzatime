@@ -16,7 +16,8 @@ import {
   Calculator,
   FileText,
   Ticket,
-  Package
+  Package,
+  DollarSign
 } from 'lucide-react'
 import Link from 'next/link'
 import Button from '@/components/Button'
@@ -76,6 +77,13 @@ export default function AdminDashboard({ session }: AdminDashboardProps) {
       description: 'إنشاء وإدارة كوبونات الخصم',
       href: '/dash/coupons',
       color: 'bg-purple-500'
+    },
+    {
+      icon: DollarSign,
+      title: 'إدارة المصروفات',
+      description: 'إدارة المصروفات التشغيلية والإدارية',
+      href: '/dash/expenses',
+      color: 'bg-emerald-500'
     },
     {
       icon: CreditCard,

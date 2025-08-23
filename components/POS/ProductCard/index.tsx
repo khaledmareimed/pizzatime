@@ -3,6 +3,7 @@
 import React from 'react'
 import { Product } from '@/funcs/collections'
 import Image from 'next/image'
+import { formatJordanCurrency } from '@/funcs/jordanLocale'
 
 interface ProductCardProps {
   product: Product
@@ -69,7 +70,7 @@ export default function ProductCard({ product, onClick }: ProductCardProps) {
         {/* Price */}
         <div className="flex items-center justify-between">
           <span className="font-bold text-gray-900 dark:text-white">
-            {displayPrice.toFixed(2)} ر.س
+            {formatJordanCurrency(displayPrice)}
           </span>
           
           {product.available && (

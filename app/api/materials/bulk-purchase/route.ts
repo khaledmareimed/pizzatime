@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '../../../../auth'
-import { createCollection } from '../../../../funcs/collections'
+import { createCollection, Financial, FinancialSchema, FinancialIndexes, FinancialHelpers } from '../../../../funcs/collections'
 import { RawMaterial, RawMaterialSchema, RawMaterialIndexes } from '../../../../funcs/collections/material'
 import { BulkTransaction, BulkTransactionSchema, BulkTransactionIndexes } from '../../../../funcs/collections/bulk-transaction'
 import { uploadToImgBB } from '../../../../funcs/imgbb'
@@ -150,6 +150,59 @@ export async function POST(request: NextRequest) {
     })
 
     await bulkTransaction.save()
+
+    // Create expense record for the bulk purchase
+    try {
+      const financialCollection = await createCollection<Financial>('financial', FinancialSchema, {
+        indexes: FinancialIndexes
+      })
+
+      const totalCost = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0)
+
+      // Convert purchase date to Jordan timezone (UTC+3)
+      const jordanPurchaseDate = new Date(purchaseDate)
+      // Ensure we're working with Jordan timezone
+      const jordanOffset = 3 * 60 // Jordan is UTC+3
+      const localOffset = jordanPurchaseDate.getTimezoneOffset()
+      const jordanTime = new Date(jordanPurchaseDate.getTime() + (localOffset + jordanOffset) * 60000)
+
+      const expenseTransaction = new financialCollection.model({
+        transactionId: FinancialHelpers.generateTransactionId(),
+        type: 'expense',
+        category: 'materials',
+        amount: totalCost,
+        description: `شراء مواد خام بالجملة - ${supplierName}`,
+        paymentMethod: 'cash', // Default, can be updated later
+        notes: `فاتورة رقم: ${invoiceNumber} - عدد المواد: ${items.length} - تاريخ الشراء: ${jordanTime.toLocaleDateString('ar-JO')}`,
+        invoiceNumber: invoiceNumber,
+        invoiceImage: invoiceImageUrl,
+        transactionDate: jordanTime,
+        isVerified: true,
+        verifiedBy: session.user.id || session.user.email,
+        verifiedAt: new Date(), // Current time in server timezone
+        metadata: {
+          bulkTransactionId: bulkTransaction._id.toString(),
+          supplierId: supplierId,
+          supplierName: supplierName,
+          itemCount: items.length,
+          expenseType: 'bulk_material_purchase',
+          createdBy: session.user.id || session.user.email,
+          createdByName: session.user.name || session.user.email,
+          materials: items.map(item => ({
+            materialId: item.materialId,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            totalCost: item.quantity * item.unitPrice
+          }))
+        }
+      })
+
+      await expenseTransaction.save()
+      console.log(`✅ Created expense record for bulk purchase: ${expenseTransaction.transactionId}`)
+    } catch (error) {
+      console.error('❌ Error creating expense record for bulk purchase:', error)
+      // Don't fail the entire transaction, just log the error
+    }
 
     // Now update individual materials with stock changes only
     for (const item of items) {

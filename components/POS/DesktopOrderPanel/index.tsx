@@ -178,7 +178,12 @@ export default function DesktopOrderPanel({
               <div className="p-4">
                 <div className="text-center py-8">
                   <svg className="w-16 h-16 mx-auto text-gray-400 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2-2v6.01" />
+                 <path  strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h2.5l1.2 2.8" />
+      <path   strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 7h13l-1.4 7.2a2 2 0 0 1-2 1.6H9.4a2 2 0 0 1-2-1.4L6 7z" />
+      <path  strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}  d="M9 7l1.2 8.8M13 7v8.8M17 7l-1.2 8.8" />
+      <circle    strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} cx="9" cy="20" r="1.6" />
+      <circle     strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} cx="17" cy="20" r="1.6" />
+
                   </svg>
                   <p className="text-gray-500 dark:text-gray-400 mb-4">لا توجد أصناف في الطلب</p>
                   <p className="text-sm text-gray-400 dark:text-gray-500 mb-6">اختر المنتجات من القائمة لبدء طلب جديد</p>
@@ -269,7 +274,7 @@ export default function DesktopOrderPanel({
                   </span>
                 </div>
                 <span className="text-sm font-bold text-gray-900 dark:text-white">
-                  {summary.total.toFixed(2)} ر.س
+                  {summary.total.toFixed(2)} JOD
                 </span>
               </div>
             </div>
@@ -354,7 +359,7 @@ export default function DesktopOrderPanel({
             <div className="flex items-center justify-between mb-3">
               <span className="text-gray-600 dark:text-gray-400">الإجمالي</span>
               <span className="text-xl font-bold text-gray-900 dark:text-white">
-                {summary.total.toFixed(2)} ر.س
+                {summary.total.toFixed(2)} JOD
               </span>
             </div>
             <Button

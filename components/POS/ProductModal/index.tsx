@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { Product } from '@/funcs/collections'
 import Image from 'next/image'
 import Button from '@/components/Button'
+import { formatJordanCurrency } from '@/funcs/jordanLocale'
 
 interface ProductModalProps {
   product: Product
@@ -122,7 +123,7 @@ export default function ProductModal({ product, onAddToCart, onClose }: ProductM
           )}
 
           <div className="text-lg font-bold text-green-600 dark:text-green-400 mb-6">
-            {displayPrice.toFixed(2)} ر.س
+            {formatJordanCurrency(displayPrice)} 
           </div>
 
           {/* Mobile Options */}
@@ -150,7 +151,7 @@ export default function ProductModal({ product, onAddToCart, onClose }: ProductM
                           ? 'text-white'
                           : 'text-green-600 dark:text-green-400'
                       }`}>
-                        +{choice.choicePrice.toFixed(2)} ر.س
+                        +{formatJordanCurrency(choice.choicePrice)} 
                       </span>
                     )}
                   </button>
@@ -182,7 +183,7 @@ export default function ProductModal({ product, onAddToCart, onClose }: ProductM
                         ? 'text-white'
                         : 'text-green-600 dark:text-green-400'
                     }`}>
-                      +{(addon.toppingPrice || 0).toFixed(2)} ر.س
+                      +{formatJordanCurrency(addon.toppingPrice || 0)} 
                     </span>
                   </button>
                 ))}
@@ -229,13 +230,13 @@ export default function ProductModal({ product, onAddToCart, onClose }: ProductM
               </div>
             </div>
             <div className="text-lg font-bold text-gray-900 dark:text-white">
-              الإجمالي: {calculateTotalPrice().toFixed(2)} ر.س
+              الإجمالي: {formatJordanCurrency(calculateTotalPrice())} 
             </div>
           </div>
           <div className="flex space-x-3 space-x-reverse">
             <Button onClick={onClose} variant="outline" size="md">إلغاء</Button>
             <Button onClick={handleAddToCart} disabled={!canAddToCart()} variant="primary" size="md">
-              إضافة للطلب - {calculateTotalPrice().toFixed(2)} ر.س
+              إضافة للطلب - {formatJordanCurrency(calculateTotalPrice())} 
             </Button>
           </div>
         </div>
@@ -272,7 +273,7 @@ export default function ProductModal({ product, onAddToCart, onClose }: ProductM
               </p>
             )}
             <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-              {displayPrice.toFixed(2)} ر.س
+              {formatJordanCurrency(displayPrice)} 
             </div>
           </div>
           
@@ -302,7 +303,7 @@ export default function ProductModal({ product, onAddToCart, onClose }: ProductM
             
             {/* Total Price */}
             <div className="text-lg font-bold text-gray-900 dark:text-white text-center py-2 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-              الإجمالي: {calculateTotalPrice().toFixed(2)} ر.س
+              الإجمالي: {formatJordanCurrency(calculateTotalPrice())} 
             </div>
             
             {/* Action Buttons */}
@@ -314,7 +315,7 @@ export default function ProductModal({ product, onAddToCart, onClose }: ProductM
                 size="md"
                 className="w-full"
               >
-                إضافة للطلب - {calculateTotalPrice().toFixed(2)} ر.س
+                إضافة للطلب - {formatJordanCurrency(calculateTotalPrice())} 
               </Button>
               <Button
                 onClick={onClose}
@@ -362,7 +363,7 @@ export default function ProductModal({ product, onAddToCart, onClose }: ProductM
                               ? 'text-white'
                               : 'text-green-600 dark:text-green-400'
                           }`}>
-                            +{choice.choicePrice.toFixed(2)} ر.س
+                            +{formatJordanCurrency(choice.choicePrice)} 
                           </span>
                         )}
                       </button>
@@ -409,7 +410,7 @@ export default function ProductModal({ product, onAddToCart, onClose }: ProductM
                           ? 'text-white'
                           : 'text-green-600 dark:text-green-400'
                       }`}>
-                        +{addon.toppingPrice.toFixed(2)} ر.س
+                        +{formatJordanCurrency(addon.toppingPrice)} 
                       </span>
                     </button>
                   ))}

@@ -3,6 +3,7 @@
 import React from 'react'
 import { CartSummary } from '@/funcs/types/cart'
 import Button from '@/components/Button'
+import { formatJordanCurrency } from '@/funcs/jordanLocale'
 
 interface EnhancedOrderSummaryProps {
   summary: CartSummary
@@ -54,7 +55,7 @@ export default function EnhancedOrderSummary({
         <div className="flex items-center justify-between text-sm">
           <span className="text-gray-600 dark:text-gray-400">المجموع الفرعي</span>
           <span className="text-gray-900 dark:text-white font-medium">
-            {subtotal.toFixed(2)} ر.س
+            {formatJordanCurrency(subtotal)}
           </span>
         </div>
 
@@ -65,7 +66,7 @@ export default function EnhancedOrderSummary({
               خصم القسيمة ({appliedCoupon.code})
             </span>
             <span className="text-green-600 dark:text-green-400 font-medium">
-              -{couponDiscount.toFixed(2)} ر.س
+              -{formatJordanCurrency(couponDiscount)}
             </span>
           </div>
         )}
@@ -74,10 +75,10 @@ export default function EnhancedOrderSummary({
         {appliedDiscount && (
           <div className="flex items-center justify-between text-sm">
             <span className="text-orange-600 dark:text-orange-400">
-              خصم إداري ({appliedDiscount.type === 'percentage' ? `${appliedDiscount.value}%` : `${appliedDiscount.value} ر.س`})
+              خصم إداري ({appliedDiscount.type === 'percentage' ? `${appliedDiscount.value}%` : formatJordanCurrency(appliedDiscount.value)})
             </span>
             <span className="text-orange-600 dark:text-orange-400 font-medium">
-              -{manualDiscount.toFixed(2)} ر.س
+              -{formatJordanCurrency(manualDiscount)}
             </span>
           </div>
         )}
@@ -88,7 +89,7 @@ export default function EnhancedOrderSummary({
             {deliveryMethod === 'delivery' ? 'رسوم التوصيل' : 'الاستلام من المطعم'}
           </span>
           <span className="text-gray-900 dark:text-white font-medium">
-            {delivery > 0 ? `${delivery.toFixed(2)} ر.س` : 'مجاناً'}
+            {delivery > 0 ? formatJordanCurrency(delivery) : 'مجاناً'}
           </span>
         </div>
 
@@ -99,7 +100,7 @@ export default function EnhancedOrderSummary({
               الإجمالي النهائي
             </span>
             <span className="text-xl font-bold text-blue-600 dark:text-blue-400">
-              {finalTotal.toFixed(2)} ر.س
+              {formatJordanCurrency(finalTotal)}
             </span>
           </div>
         </div>
@@ -127,7 +128,7 @@ export default function EnhancedOrderSummary({
               <span>جاري المعالجة...</span>
             </div>
           ) : (
-            `إتمام الطلب (${finalTotal.toFixed(2)} ر.س)`
+            `إتمام الطلب (${formatJordanCurrency(finalTotal)})`
           )}
         </Button>
 
@@ -138,7 +139,7 @@ export default function EnhancedOrderSummary({
               <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
               </svg>
-              وفرت {totalDiscount.toFixed(2)} ر.س
+              وفرت {formatJordanCurrency(totalDiscount)}
             </span>
           </div>
         )}

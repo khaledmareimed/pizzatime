@@ -72,7 +72,7 @@ export default function DeliveryOptions({
                     {option.label}
                   </h3>
                   <span className="text-sm font-bold text-gray-900 dark:text-white">
-                    {option.price > 0 ? `${option.price.toFixed(2)} ر.س` : 'مجاناً'}
+                    {option.price > 0 ? `${option.price.toFixed(2)} JOD` : 'مجاناً'}
                   </span>
                 </div>
                 <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">

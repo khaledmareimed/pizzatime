@@ -66,7 +66,7 @@ export default function FoodItem({ item, onUpdateQuantity, onRemoveItem }: FoodI
                 {item.name}
               </h4>
               <p className={cn('text-xs', theme.text.secondary)}>
-                {item.price.toFixed(2)} ر.س للقطعة
+                {item.price.toFixed(2)}JOD للقطعة
               </p>
             </div>
             
@@ -97,7 +97,7 @@ export default function FoodItem({ item, onUpdateQuantity, onRemoveItem }: FoodI
                       {option.optionTitle}: {option.choiceName}
                     </span>
                     <span className={theme.text.primary}>
-                      {option.choicePrice > 0 ? `+${option.choicePrice.toFixed(2)} ر.س` : 'مجاني'}
+                      {option.choicePrice > 0 ? `+${option.choicePrice.toFixed(2)} JOD` : 'مجاني'}
                     </span>
                   </div>
                 ))}
@@ -115,7 +115,7 @@ export default function FoodItem({ item, onUpdateQuantity, onRemoveItem }: FoodI
                 {item.addons.map((addon) => (
                   <div key={addon.id} className="flex justify-between text-xs">
                     <span className={theme.text.secondary}>+ {addon.name}</span>
-                    <span className={theme.text.primary}>+{addon.price.toFixed(2)} ر.س</span>
+                    <span className={theme.text.primary}>+{addon.price.toFixed(2)} JOD</span>
                   </div>
                 ))}
               </div>

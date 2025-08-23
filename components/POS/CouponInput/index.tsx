@@ -74,7 +74,7 @@ export default function CouponInput({
                 {appliedCoupon.name} ({appliedCoupon.code})
               </p>
               <p className="text-sm font-bold text-green-800 dark:text-green-200">
-                خصم: -{appliedCoupon.discountAmount.toFixed(2)} ر.س
+                خصم: -{appliedCoupon.discountAmount.toFixed(2)} JOD
               </p>
               {appliedCoupon.usageInfo && (
                 <div className="mt-2 space-y-1">

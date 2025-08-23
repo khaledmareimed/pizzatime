@@ -1,8 +1,8 @@
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
-import FinancialReports from '@/components/Dashboard/FinancialReports'
+import AdvancedReports from '@/components/Dashboard/AdvancedReports'
 
-export default async function FinancialReportsPage() {
+export default async function AdvancedReportsPage() {
   const session = await auth()
   
   if (!session) {
@@ -15,8 +15,6 @@ export default async function FinancialReportsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <FinancialReports session={session} />
-    </div>
+    <AdvancedReports session={session} />
   )
 }

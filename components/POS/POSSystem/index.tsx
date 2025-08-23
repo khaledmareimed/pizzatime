@@ -218,7 +218,7 @@ export default function POSSystem({ session }: POSSystemProps) {
       value,
       amount: discountAmount
     })
-    success(`تم تطبيق خصم ${type === 'percentage' ? value + '%' : value + ' ر.س'}`)
+    success(`تم تطبيق خصم ${type === 'percentage' ? value + '%' : value + ' JOD'}`)
   }
 
   const handleRemoveDiscount = () => {
@@ -625,7 +625,7 @@ export default function POSSystem({ session }: POSSystemProps) {
           >
             <div className="flex items-center justify-between w-full">
               <span>عرض الطلب ({cartSummary.totalItems})</span>
-              <span className="font-bold">{cartSummary.total.toFixed(2)} ر.س</span>
+              <span className="font-bold">{cartSummary.total.toFixed(2)} JOD</span>
             </div>
           </Button>
         )}

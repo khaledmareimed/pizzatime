@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { redirect } from 'next/navigation'
 import Button from '@/components/Button'
+import { formatJordanCurrency } from '@/funcs/jordanLocale'
+import { useToastContext } from '@/funcs/contexts/ToastContext'
 
 interface POSOrder {
   _id: string
@@ -40,11 +42,13 @@ interface POSOrder {
 
 export default function POSOrdersPage() {
   const { data: session, status } = useSession()
+  const { success, error: showError } = useToastContext()
   const [orders, setOrders] = useState<POSOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedStatus, setSelectedStatus] = useState<string>('all')
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+  const [updating, setUpdating] = useState<string | null>(null)
 
   // Redirect if not authenticated or not admin
   useEffect(() => {
@@ -87,6 +91,8 @@ export default function POSOrdersPage() {
 
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
     try {
+      setUpdating(orderId)
+      
       // Determine payment status based on order status
       const paymentStatus = newStatus === 'delivered' ? 'paid' : 'pending'
       
@@ -102,10 +108,32 @@ export default function POSOrdersPage() {
       })
 
       if (response.ok) {
+        const result = await response.json()
+        
+        // Show success message with material transaction info if available
+        let successMessage = 'تم تحديث حالة الطلب بنجاح'
+        if (result.materialTransaction) {
+          const { action, materialsProcessed } = result.materialTransaction
+          if (action === 'DEDUCT') {
+            successMessage += ` وتم خصم ${materialsProcessed} مادة من المخزون`
+          } else if (action === 'RESTORE') {
+            successMessage += ` وتم إرجاع ${materialsProcessed} مادة للمخزون`
+          }
+        }
+        
+        // Show success notification
+        success('تم التحديث', successMessage)
+        
         loadOrders() // Reload orders
+      } else {
+        const errorData = await response.json()
+        showError('خطأ في التحديث', errorData.error || 'فشل في تحديث حالة الطلب')
       }
     } catch (error) {
       console.error('Error updating order status:', error)
+      showError('خطأ في التحديث', 'حدث خطأ أثناء تحديث حالة الطلب. يرجى المحاولة مرة أخرى.')
+    } finally {
+      setUpdating(null)
     }
   }
 
@@ -202,7 +230,9 @@ export default function POSOrdersPage() {
         {orders.length === 0 ? (
           <div className="text-center py-12">
             <svg className="w-16 h-16 mx-auto text-gray-400 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H19" />
+              <circle cx="9" cy="20" r="1"/>
+              <circle cx="20" cy="20" r="1"/>
             </svg>
             <p className="text-gray-500 dark:text-gray-400">لا توجد طلبات</p>
           </div>
@@ -242,19 +272,27 @@ export default function POSOrdersPage() {
                     }`}>
                       {order.paymentStatus === 'paid' ? 'مدفوع' : 'غير مدفوع'}
                     </span>
-                    <select
-                      value={order.status}
-                      onChange={(e) => updateOrderStatus(order._id, e.target.value)}
-                      className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    >
-                      <option value="pending">في الانتظار</option>
-                      <option value="confirmed">مؤكد</option>
-                      <option value="preparing">قيد التحضير</option>
-                      <option value="ready">جاهز</option>
-                      <option value="out-for-delivery">في الطريق</option>
-                      <option value="delivered">تم التسليم</option>
-                      <option value="cancelled">ملغي</option>
-                    </select>
+                    <div className="flex items-center space-x-1 space-x-reverse">
+                      <select
+                        value={order.status}
+                        onChange={(e) => updateOrderStatus(order._id, e.target.value)}
+                        disabled={updating === order._id}
+                        className={`px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                          updating === order._id ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                      >
+                        <option value="pending">في الانتظار</option>
+                        <option value="confirmed">مؤكد</option>
+                        <option value="preparing">قيد التحضير</option>
+                        <option value="ready">جاهز</option>
+                        <option value="out-for-delivery">في الطريق</option>
+                        <option value="delivered">تم التسليم</option>
+                        <option value="cancelled">ملغي</option>
+                      </select>
+                      {updating === order._id && (
+                        <div className="w-3 h-3 border border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -279,15 +317,15 @@ export default function POSOrdersPage() {
                     <h4 className="font-medium text-gray-900 dark:text-white mb-2">ملخص الطلب</h4>
                     <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
                       <p>عدد الأصناف: {order.items?.length || 0}</p>
-                      <p>الإجمالي: {order.orderSummary.total.toFixed(2)} ر.س</p>
+                      <p>الإجمالي: {order.orderSummary.total.toFixed(2)}JOD</p>
                       {order.orderSummary.deliveryFee > 0 && (
-                        <p>رسوم التوصيل: {order.orderSummary.deliveryFee.toFixed(2)} ر.س</p>
+                        <p>رسوم التوصيل: {order.orderSummary.deliveryFee.toFixed(2)}JOD</p>
                       )}
                       {order.orderSummary.couponDiscount > 0 && (
-                        <p>خصم القسيمة: -{order.orderSummary.couponDiscount.toFixed(2)} ر.س</p>
+                        <p>خصم القسيمة: -{order.orderSummary.couponDiscount.toFixed(2)}JOD</p>
                       )}
                       {order.orderSummary.manualDiscount > 0 && (
-                        <p>الخصم الإداري: -{order.orderSummary.manualDiscount.toFixed(2)} ر.س</p>
+                        <p>الخصم الإداري: -{order.orderSummary.manualDiscount.toFixed(2)}JOD</p>
                       )}
                     </div>
                   </div>
@@ -309,7 +347,7 @@ export default function POSOrdersPage() {
                           )}
                         </div>
                         <span className="text-gray-900 dark:text-white font-medium">
-                          {(item.price * item.quantity).toFixed(2)} ر.س
+                          {formatJordanCurrency(item.price * item.quantity)}
                         </span>
                       </div>
                     ))}

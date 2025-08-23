@@ -73,11 +73,11 @@ export default function ManualDiscount({
               <p className="text-sm text-orange-700 dark:text-orange-300">
                 {appliedDiscount.type === 'percentage' 
                   ? `${appliedDiscount.value}% خصم`
-                  : `${appliedDiscount.value} ر.س خصم ثابت`
+                  : `${appliedDiscount.value} JOD خصم ثابت`
                 }
               </p>
               <p className="text-sm font-bold text-orange-800 dark:text-orange-200">
-                خصم: -{appliedDiscount.amount.toFixed(2)} ر.س
+                خصم: -{appliedDiscount.amount.toFixed(2)} JOD
               </p>
             </div>
           </div>
@@ -123,7 +123,7 @@ export default function ManualDiscount({
           }`}
           disabled={disabled}
         >
-          مبلغ ثابت ر.س
+          مبلغ ثابت JOD
         </button>
       </div>
 
@@ -142,7 +142,7 @@ export default function ManualDiscount({
             disabled={disabled}
           />
           <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 text-sm">
-            {discountType === 'percentage' ? '%' : 'ر.س'}
+            {discountType === 'percentage' ? '%' : 'JOD'}
           </div>
         </div>
         <Button
@@ -159,7 +159,7 @@ export default function ManualDiscount({
       {/* Preview */}
       {discountValue && calculatePreviewAmount() > 0 && (
         <div className="text-sm text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 rounded-lg p-2">
-          معاينة الخصم: -{calculatePreviewAmount().toFixed(2)} ر.س
+          معاينة الخصم: -{calculatePreviewAmount().toFixed(2)} JOD
         </div>
       )}
     </div>

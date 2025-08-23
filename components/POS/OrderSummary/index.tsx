@@ -3,6 +3,7 @@
 import React from 'react'
 import { CartSummary } from '@/funcs/types/cart'
 import Button from '@/components/Button'
+import { formatJordanCurrency } from '@/funcs/jordanLocale'
 
 interface OrderSummaryProps {
   summary: CartSummary
@@ -16,7 +17,7 @@ export default function OrderSummary({ summary, onCheckout }: OrderSummaryProps)
       <div className="flex items-center justify-between mb-4">
         <span className="text-gray-600 dark:text-gray-400">الإجمالي</span>
         <span className="text-xl font-bold text-gray-900 dark:text-white">
-          {summary.total.toFixed(2)} ر.س
+          {formatJordanCurrency(summary.total)}
         </span>
       </div>
 

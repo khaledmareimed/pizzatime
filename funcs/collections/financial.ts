@@ -42,18 +42,42 @@ export const FinancialSchema = {
     type: String,
     required: true,
     enum: [
-      'food_sales',       // Food item sales
-      'delivery',         // Delivery services
-      'marketing',        // Marketing expenses
-      'operations',       // Operational costs
-      'supplies',         // Inventory/supplies
-      'utilities',        // Utilities and rent
-      'staff',            // Staff payments
-      'taxes',            // Tax payments
-      'refunds',          // Customer refunds
-      'discounts',        // Promotional discounts
-      'fees',             // Payment processing fees
-      'other'             // Other transactions
+      // Revenue categories
+      'food_sales',              // Food item sales
+      'delivery',                // Delivery services
+      
+      // Expense categories - Operational
+      'rent',                    // Rent expenses
+      'utilities',               // Utilities (electricity, water, internet)
+      'salaries',                // Employee salaries
+      'marketing',               // Marketing and advertising
+      'maintenance',             // Maintenance and repairs
+      'equipment',               // Equipment and devices
+      'insurance',               // Insurance
+      'licenses',                // Licenses and fees
+      'transportation',          // Transportation
+      'packaging',               // Packaging materials
+      'cleaning',                // Cleaning and sanitization
+      'professional_services',   // Professional services
+      'training',                // Training and development
+      'software',                // Software and applications
+      'bank_fees',               // Bank fees
+      'office_supplies',         // Office supplies
+      'security',                // Security
+      'waste_management',        // Waste management
+      
+      // Expense categories - Business
+      'materials',               // Material purchases (from inventory)
+      'operations',              // General operational costs
+      'supplies',                // General supplies
+      'staff',                   // Staff payments (legacy)
+      'taxes',                   // Tax payments
+      'fees',                    // Payment processing fees
+      
+      // Transaction categories
+      'refunds',                 // Customer refunds
+      'discounts',               // Promotional discounts
+      'other'                    // Other transactions
     ]
   },
   

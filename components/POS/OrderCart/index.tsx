@@ -3,6 +3,7 @@
 import React from 'react'
 import { CartItem } from '@/funcs/types/cart'
 import Image from 'next/image'
+import { formatJordanCurrency } from '@/funcs/jordanLocale'
 
 interface OrderCartProps {
   items: CartItem[]
@@ -71,7 +72,7 @@ export default function OrderCart({
               
               {/* Price */}
               <div className="text-green-600 dark:text-green-400 font-bold text-sm mb-2">
-                {item.price.toFixed(2)} ر.س × {item.quantity}
+                {formatJordanCurrency(item.price)} × {item.quantity}
               </div>
 
               {/* Addons */}
@@ -81,7 +82,7 @@ export default function OrderCart({
                   <div className="mt-1">
                     {item.addons.map((addon, index) => (
                       <span key={index} className="inline-block mr-2">
-                        {addon.name} (+{(addon.price || 0).toFixed(2)} ر.س)
+                        {addon.name} (+{formatJordanCurrency(addon.price || 0)})
                       </span>
                     ))}
                   </div>
@@ -94,7 +95,7 @@ export default function OrderCart({
                   {item.options.map((option, index) => (
                     <div key={index} className="flex justify-between">
                       <span className="font-medium text-purple-700 dark:text-purple-300">{option.optionTitle}:</span>
-                      <span>{option.choiceName} {option.choicePrice > 0 && `(+${option.choicePrice.toFixed(2)} ر.س)`}</span>
+                      <span>{option.choiceName} {option.choicePrice > 0 && `(+${option.choicePrice.toFixed(2)} JOD)`}</span>
                     </div>
                   ))}
                 </div>
@@ -136,7 +137,7 @@ export default function OrderCart({
                     {((item.price + 
                       item.addons.reduce((sum, addon) => sum + (addon.price || 0), 0) +
                       item.options.reduce((sum, option) => sum + (option.choicePrice || 0), 0)
-                    ) * item.quantity).toFixed(2)} ر.س
+                    ) * item.quantity).toFixed(2)} JOD
                   </span>
                 </div>
               </div>
