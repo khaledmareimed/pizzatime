@@ -171,8 +171,10 @@ export async function GET(request: NextRequest) {
       statusCounts[order.status] = (statusCounts[order.status] || 0) + 1
 
       // Count by date
-      const dateKey = order.createdAt.toISOString().split('T')[0]
-      dateCounts[dateKey] = (dateCounts[dateKey] || 0) + 1
+      if (order.createdAt) {
+        const dateKey = order.createdAt.toISOString().split('T')[0]
+        dateCounts[dateKey] = (dateCounts[dateKey] || 0) + 1
+      }
     })
 
     analytics.orderAnalytics.byStatus = statusCounts

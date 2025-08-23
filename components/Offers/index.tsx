@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Percent, Gift, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '../../funcs/utils';
@@ -14,51 +14,42 @@ import Card from '../Card';
 import Button from '../Button';
 import type { OfferItem } from '../../funcs/utils';
 
-const offers: OfferItem[] = [
-  {
-    id: '1',
-    title: 'عرض العائلة المميز',
-    description: '2 بيتزا كبيرة + 2 مشروب + حلى',
-    discount: '149.00',
-    image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400&h=300&fit=crop&crop=center',
-    validUntil: '2025-12-31',
-    code: 'FAMILY39'
-  },
-  {
-    id: '2',
-    title: 'وجبة البرجر الشاملة',
-    description: 'برجر لحم + بطاطس مقلية + مشروب',
-    discount: '49.00',
-    image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop&crop=center',
-    validUntil: '2025-12-31',
-    code: 'BURGER12'
-  },
-  {
-    id: '3',
-    title: 'عرض الغداء الخاص',
-    description: 'أي طبق رئيسي + طبق جانبي + مشروب',
-    discount: '59.00',
-    image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=300&fit=crop&crop=center',
-    validUntil: '2025-12-31',
-    code: 'LUNCH15'
-  },
-  {
-    id: '4',
-    title: 'فطور نهاية الأسبوع',
-    description: 'بان كيك + قهوة + عصير طازج',
-    discount: '69.00',
-    image: 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&h=300&fit=crop&crop=center',
-    validUntil: '2025-12-31',
-    code: 'BRUNCH18'
-  }
-];
-
 interface OffersProps {
   onClaimOffer?: (offer: OfferItem) => void;
 }
 
 export default function Offers({ onClaimOffer }: OffersProps) {
   const sliderRef = useRef<HTMLDivElement>(null);
+  const [offers, setOffers] = useState<OfferItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch offers from API
+  useEffect(() => {
+    const fetchOffers = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const response = await fetch('/api/public/offers');
+        if (!response.ok) {
+          throw new Error('Failed to fetch offers');
+        }
+        
+        const data = await response.json();
+        setOffers(data.offers || []);
+      } catch (err) {
+        console.error('Error fetching offers:', err);
+        setError('فشل في تحميل العروض');
+        // Fallback to empty array
+        setOffers([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOffers();
+  }, []);
 
   const scrollLeft = () => {
     if (sliderRef.current) {
@@ -145,7 +136,60 @@ export default function Offers({ onClaimOffer }: OffersProps) {
             ref={sliderRef}
             className="flex gap-6 overflow-x-auto pb-4 px-2 scrollbar-hide snap-x snap-mandatory"
           >
-            {offers.map((offer, index) => (
+            {loading ? (
+              // Loading skeleton
+              Array.from({ length: 3 }).map((_, index) => (
+                <div key={index} className="flex-none w-72 md:w-80 snap-start">
+                  <Card className="h-full animate-pulse">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+                      <div className="w-20 h-6 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
+                      <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-full mt-6"></div>
+                    </div>
+                  </Card>
+                </div>
+              ))
+            ) : error ? (
+              // Error state
+              <div className="flex-none w-full text-center py-12">
+                <div className={cn(
+                  'text-red-500 dark:text-red-400 mb-4',
+                  responsive.fontSize.lg
+                )}>
+                  {error}
+                </div>
+                <Button
+                  onClick={() => window.location.reload()}
+                  variant="outline"
+                >
+                  إعادة المحاولة
+                </Button>
+              </div>
+            ) : offers.length === 0 ? (
+              // No offers state
+              <div className="flex-none w-full text-center py-12">
+                <Gift className={cn('w-16 h-16 mx-auto mb-4', theme.text.secondary)} />
+                <div className={cn(
+                  'mb-2',
+                  responsive.fontSize.xl,
+                  theme.text.primary
+                )}>
+                  لا توجد عروض حالياً
+                </div>
+                <div className={cn(
+                  responsive.fontSize.base,
+                  theme.text.secondary
+                )}>
+                  تابعونا للحصول على أحدث العروض والخصومات
+                </div>
+              </div>
+            ) : (
+              offers.map((offer, index) => (
               <motion.div
                 key={offer.id}
                 initial={{ opacity: 0, x: 50 }}
@@ -174,7 +218,7 @@ export default function Offers({ onClaimOffer }: OffersProps) {
                       'px-3 py-1 rounded-full text-xs font-bold',
                       'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
                     )}>
-                      {formatOfferPrice(parseFloat(offer.discount))}
+                      {formatOfferPrice(parseFloat(offer.price))}
                     </div>
                   </div>
 
@@ -208,7 +252,8 @@ export default function Offers({ onClaimOffer }: OffersProps) {
                 </div>
               </Card>
             </motion.div>
-          ))}
+              ))
+            )}
           </div>
         </div>
 

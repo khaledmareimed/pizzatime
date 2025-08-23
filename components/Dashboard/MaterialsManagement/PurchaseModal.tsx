@@ -8,6 +8,7 @@ import { formatJordanCurrency } from '../../../funcs/jordanLocale'
 import Button from '../../Button'
 import { useToastContext } from '../../../funcs/contexts/ToastContext'
 import { UNIT_LABELS } from './index'
+import { createProfessionalNumberInputProps, createCurrencyInputProps } from '../../../funcs/number-utils'
 
 interface RawMaterial {
   _id: string
@@ -274,13 +275,13 @@ export default function PurchaseModal({ material, onClose, onSuccess }: Purchase
                 الكمية ({UNIT_LABELS[material.unit]}) *
               </label>
               <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.quantity}
-                onChange={(e) => handleInputChange('quantity', e.target.value)}
+                {...createProfessionalNumberInputProps(
+                  formData.quantity,
+                  (value) => handleInputChange('quantity', value),
+                  "0"
+                )}
                 className={cn(
-                  'w-full px-4 py-3 rounded-xl border',
+                  'w-full px-4 py-3 rounded-xl border professional-number-input',
                   theme.background.card,
                   theme.border.primary,
                   theme.text.primary,
@@ -300,13 +301,13 @@ export default function PurchaseModal({ material, onClose, onSuccess }: Purchase
                 سعر الوحدة (ر.س) *
               </label>
               <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.unitPrice}
-                onChange={(e) => handleInputChange('unitPrice', e.target.value)}
+                {...createCurrencyInputProps(
+                  formData.unitPrice,
+                  (value) => handleInputChange('unitPrice', value),
+                  "0.00"
+                )}
                 className={cn(
-                  'w-full px-4 py-3 rounded-xl border',
+                  'w-full px-4 py-3 rounded-xl border professional-number-input',
                   theme.background.card,
                   theme.border.primary,
                   theme.text.primary,

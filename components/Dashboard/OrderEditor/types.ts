@@ -106,8 +106,13 @@ export interface OrderTotals {
   total: number
 }
 
+export interface SaveResult {
+  success: boolean
+  materialTransaction?: any
+}
+
 export interface OrderEditorProps {
   order: any
-  onSave: (updatedOrder: any) => Promise<boolean>
+  onSave: (updatedOrder: any) => Promise<boolean | SaveResult>
   onCancel: () => void
 }

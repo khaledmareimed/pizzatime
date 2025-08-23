@@ -27,6 +27,62 @@ import {
   getOrderStatusTranslation
 } from './types/order-status'
 
+// Re-export the helper function for external use
+export const shouldProcessMaterialUsage = shouldProcessMaterialUsageHelper
+
+/**
+ * Calculate material usage for an order (alias for calculateMaterialRequirements)
+ * This function provides the same functionality as calculateMaterialRequirements
+ * but with a name that matches the expected API usage
+ */
+export async function calculateOrderMaterialUsage(order: Order): Promise<MaterialRequirement[]> {
+  return await calculateMaterialRequirements(order)
+}
+
+/**
+ * Process material usage for an order (force apply materials)
+ * This function forces the application of material usage regardless of order status
+ */
+export async function processOrderMaterialUsage(
+  order: Order,
+  userId: string,
+  reason: string
+): Promise<InventoryTransaction> {
+  console.log(`🔄 PROCESSING MATERIAL USAGE FOR ORDER: ${order.orderId}`)
+  
+  const requirements = await calculateMaterialRequirements(order)
+  
+  return await executeInventoryTransaction(
+    order.orderId,
+    requirements,
+    InventoryTransactionType.DEDUCT,
+    userId,
+    reason
+  )
+}
+
+/**
+ * Reverse material usage for an order (force restore materials)
+ * This function forces the restoration of material usage regardless of order status
+ */
+export async function reverseOrderMaterialUsage(
+  order: Order,
+  userId: string,
+  reason: string
+): Promise<InventoryTransaction> {
+  console.log(`🔄 REVERSING MATERIAL USAGE FOR ORDER: ${order.orderId}`)
+  
+  const requirements = await calculateMaterialRequirements(order)
+  
+  return await executeInventoryTransaction(
+    order.orderId,
+    requirements,
+    InventoryTransactionType.RESTORE,
+    userId,
+    reason
+  )
+}
+
 /**
  * Enterprise Inventory Transaction Types
  */
@@ -110,7 +166,7 @@ export async function calculateMaterialRequirements(order: Order): Promise<Mater
       }
       
       // Process base product materials
-      if (product.materialsUsed?.length > 0) {
+      if (product.materialsUsed && product.materialsUsed.length > 0) {
         for (const material of product.materialsUsed) {
           const quantity = material.quantity * item.quantity
           addMaterialRequirement(requirements, material, quantity, 'baseProduct')
@@ -298,7 +354,7 @@ async function executeInventoryTransaction(
       }
       
       // Execute the inventory change
-      await material.addUsage(usageRecord)
+      await (material as any).addUsage(usageRecord)
       
       console.log(`✅ ${requirement.materialName}: ${stockBefore} → ${material.currentStock} ${requirement.unit}`)
       

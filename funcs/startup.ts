@@ -36,6 +36,12 @@ export async function initializeApplication(): Promise<void> {
       await initializeAppCollections()
       console.log('✅ Collections initialized successfully')
       
+      // Ensure offers category exists
+      console.log('🎁 Ensuring offers category...')
+      const { ensureOffersCategory } = await import('./offers-utils')
+      await ensureOffersCategory()
+      console.log('✅ Offers category ready')
+      
       isInitialized = true
       console.log('🎉 Application initialization completed')
       

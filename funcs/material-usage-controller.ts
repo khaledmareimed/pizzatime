@@ -201,7 +201,14 @@ export async function updateMaterialUsageOnStatusChange(
 
     // Execute material usage transaction using MongoDB session for atomicity
     const session = await startSession()
-    let result: MaterialUsageResult
+    let result: MaterialUsageResult = {
+      success: false,
+      materialsProcessed: 0,
+      action: 'NO_CHANGE',
+      message: 'Transaction not completed',
+      errors: [],
+      warnings: []
+    }
 
     try {
       await session.withTransaction(async () => {

@@ -13,6 +13,7 @@ import OrderItemsSection from './OrderItemsSection'
 import OrderSummarySection from './OrderSummarySection'
 import ProductSelectionModal from './ProductSelectionModal'
 import ProductEditModal from './ProductEditModal'
+import MaterialDebugPanel from './MaterialDebugPanel'
 import { 
   OrderEditorProps, 
   EditedOrder, 
@@ -76,6 +77,7 @@ export default function OrderEditor({ order, onSave, onCancel }: OrderEditorProp
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [materialTransaction, setMaterialTransaction] = useState<any>(null)
 
   const { success, error } = useToastContext()
 
@@ -657,12 +659,27 @@ export default function OrderEditor({ order, onSave, onCancel }: OrderEditorProp
 
       const saveSuccess = await onSave(orderToSave)
       if (saveSuccess) {
-        success('تم الحفظ', 'تم حفظ تغييرات الطلب بنجاح')
+        // Handle both boolean and SaveResult return types
+        const isSuccess = typeof saveSuccess === 'boolean' ? saveSuccess : saveSuccess.success
+        const materialTransaction = typeof saveSuccess === 'object' ? saveSuccess.materialTransaction : null
         
-        // Reload the page after successful save
-        setTimeout(() => {
-          window.location.reload()
-        }, 1500) // Wait 1.5 seconds to show the success message
+        if (isSuccess) {
+          // Store material transaction result for debug panel
+          setMaterialTransaction(materialTransaction)
+          
+          // Show success message with material info if available
+          let successMessage = 'تم حفظ تغييرات الطلب بنجاح'
+          if (materialTransaction && materialTransaction.transactionCount > 0) {
+            successMessage += ` مع ${materialTransaction.transactionCount} معاملة مواد خام`
+          }
+          
+          success('تم الحفظ', successMessage)
+        }
+        
+        // Don't reload the page - keep the debug panel visible
+        // setTimeout(() => {
+        //   window.location.reload()
+        // }, 1500)
       }
     } catch (err) {
       console.error('Error saving order:', err)
@@ -729,6 +746,12 @@ export default function OrderEditor({ order, onSave, onCancel }: OrderEditorProp
             onDeliveryMethodChange={updateDeliveryMethod}
             onCitySelect={setSelectedCity}
             onCustomerInfoUpdate={updateCustomerInfo}
+          />
+          
+          {/* Material Debug Panel */}
+          <MaterialDebugPanel 
+            materialTransaction={materialTransaction}
+            isVisible={!!materialTransaction}
           />
           
           {/* Order Summary - Mobile and Desktop */}

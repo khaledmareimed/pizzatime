@@ -18,6 +18,7 @@ import Button from '@/components/Button'
 import ImageUpload from './ImageUpload'
 import MaterialSelector from './MaterialSelector'
 import { ProductForm, Category, ProductOption, MaterialUsed } from './types'
+import { createCurrencyInputProps, createProfessionalNumberInputProps } from '@/funcs/number-utils'
 
 interface ProductModalProps {
   show: boolean
@@ -272,12 +273,12 @@ export default function ProductModal({
                   السعر الأساسي *
                 </label>
                 <input
-                  type="number"
-                  step="0.01"
-                  value={productForm.productPrice}
-                  onChange={(e) => setProductForm({ ...productForm, productPrice: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  min="0"
+                  {...createCurrencyInputProps(
+                    productForm.productPrice,
+                    (value) => setProductForm({ ...productForm, productPrice: parseFloat(value) || 0 }),
+                    "0.00"
+                  )}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all professional-number-input"
                   disabled={loading}
                 />
               </div>
@@ -287,12 +288,12 @@ export default function ProductModal({
                   سعر الخصم
                 </label>
                 <input
-                  type="number"
-                  step="0.01"
-                  value={productForm.productDiscountPrice}
-                  onChange={(e) => setProductForm({ ...productForm, productDiscountPrice: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  min="0"
+                  {...createCurrencyInputProps(
+                    productForm.productDiscountPrice,
+                    (value) => setProductForm({ ...productForm, productDiscountPrice: parseFloat(value) || 0 }),
+                    "0.00"
+                  )}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all professional-number-input"
                   disabled={loading}
                 />
               </div>
@@ -430,11 +431,12 @@ export default function ProductModal({
                             disabled={loading}
                           />
                           <input
-                            type="number"
-                            step="0.01"
-                            value={choice.choicePrice}
-                            onChange={(e) => updateChoice(optionIndex, choiceIndex, 'choicePrice', parseFloat(e.target.value) || 0)}
-                            className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                            {...createCurrencyInputProps(
+                              choice.choicePrice,
+                              (value) => updateChoice(optionIndex, choiceIndex, 'choicePrice', parseFloat(value) || 0),
+                              "0.00"
+                            )}
+                            className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all professional-number-input"
                             placeholder="السعر الإضافي"
                             min="0"
                             disabled={loading}
@@ -528,13 +530,12 @@ export default function ProductModal({
                       disabled={loading}
                     />
                     <input
-                      type="number"
-                      step="0.01"
-                      value={topping.toppingPrice}
-                      onChange={(e) => updateTopping(index, 'toppingPrice', parseFloat(e.target.value) || 0)}
-                      className="w-32 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                      placeholder="السعر"
-                      min="0"
+                      {...createCurrencyInputProps(
+                        topping.toppingPrice,
+                        (value) => updateTopping(index, 'toppingPrice', parseFloat(value) || 0),
+                        "السعر"
+                      )}
+                      className="w-32 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all professional-number-input"
                       disabled={loading}
                     />
                     <Button

@@ -352,7 +352,7 @@ export default function ProductsManagement() {
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center mb-6">
+          <div className="flex items-center justify-between mb-6">
             <Button
               variant="outline"
               onClick={() => window.history.back()}
@@ -361,6 +361,32 @@ export default function ProductsManagement() {
               <ArrowLeft className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">العودة للوحة التحكم</span>
               <span className="sm:hidden">عودة</span>
+            </Button>
+            
+            <Button
+              variant="accent"
+              onClick={async () => {
+                try {
+                  setSaving(true)
+                  const response = await fetch('/api/admin/create-offers-category', {
+                    method: 'POST'
+                  })
+                  if (response.ok) {
+                    await loadData() // Reload categories
+                    alert('تم إنشاء فئة العروض بنجاح!')
+                  } else {
+                    throw new Error('فشل في إنشاء فئة العروض')
+                  }
+                } catch (error) {
+                  alert('فشل في إنشاء فئة العروض')
+                } finally {
+                  setSaving(false)
+                }
+              }}
+              disabled={saving}
+              className="px-3 sm:px-4"
+            >
+              {saving ? 'جاري الإنشاء...' : 'إنشاء فئة العروض'}
             </Button>
           </div>
           

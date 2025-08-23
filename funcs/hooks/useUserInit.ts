@@ -14,6 +14,15 @@ export function useUserInit() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    const initializeApp = async () => {
+      // First initialize the application (database, collections, offers category)
+      try {
+        await fetch('/api/init')
+      } catch (error) {
+        console.error('Failed to initialize app:', error)
+      }
+    }
+
     const initializeUser = async () => {
       // Only initialize if user is authenticated and not already initialized
       if (status === 'authenticated' && session?.user?.email && !isInitialized && !isInitializing) {
@@ -21,6 +30,9 @@ export function useUserInit() {
         setError(null)
 
         try {
+          // Initialize app first
+          await initializeApp()
+
           const response = await fetch('/api/users/init', {
             method: 'POST',
             headers: {

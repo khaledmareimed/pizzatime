@@ -24,7 +24,7 @@ export interface OfferItem {
   id: string;
   title: string;
   description: string;
-  discount: string;
+  price: string; // Changed from discount to price to match the new structure
   image: string;
   validUntil: string;
   code?: string;

@@ -264,7 +264,12 @@ export default function AdminOrderDetails({ session, userId, orderId }: AdminOrd
       if (updatedOrder.order) {
         setOrder(updatedOrder.order)
       } else {
-        setOrder(prev => prev ? { ...prev, status: newStatus, paymentStatus: newPaymentStatus, notes } : null)
+        setOrder(prev => prev ? { 
+          ...prev, 
+          status: newStatus as 'pending' | 'confirmed' | 'preparing' | 'ready' | 'out-for-delivery' | 'delivered' | 'cancelled', 
+          paymentStatus: newPaymentStatus as 'pending' | 'paid' | 'failed' | 'refunded', 
+          notes 
+        } : null)
       }
       
       setEditingStatus(false)

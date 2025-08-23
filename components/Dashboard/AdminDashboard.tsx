@@ -15,7 +15,8 @@ import {
   Activity,
   Calculator,
   FileText,
-  Ticket
+  Ticket,
+  Package
 } from 'lucide-react'
 import Link from 'next/link'
 import Button from '@/components/Button'
@@ -61,6 +62,13 @@ export default function AdminDashboard({ session }: AdminDashboardProps) {
       description: 'إضافة وتعديل المنتجات والقوائم',
       href: '/dash/products',
       color: 'bg-orange-500'
+    },
+    {
+      icon: Package,
+      title: 'إدارة المواد الخام',
+      description: 'إدارة المخزون والمواد الخام للمنتجات',
+      href: '/dash/materials',
+      color: 'bg-amber-500'
     },
     {
       icon: Ticket,

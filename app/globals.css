@@ -81,3 +81,58 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Force English numerals in all dashboard inputs */
+.dash input[type="number"],
+.dash input[inputmode="numeric"],
+.dash input[inputmode="decimal"],
+.dash input[type="tel"],
+.dash input,
+.dash textarea,
+.dash select {
+  font-variant-numeric: lining-nums;
+  -webkit-font-feature-settings: "lnum";
+  font-feature-settings: "lnum";
+}
+
+/* Remove number input spinners/arrows for professional look */
+.dash input[type="number"]::-webkit-outer-spin-button,
+.dash input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.dash input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* Professional number inputs - no spinners, numeric keyboard on mobile */
+.professional-number-input {
+  font-variant-numeric: lining-nums;
+  -webkit-font-feature-settings: "lnum";
+  font-feature-settings: "lnum";
+}
+
+.professional-number-input::-webkit-outer-spin-button,
+.professional-number-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Global CSS to prevent Arabic-Indic numerals in dashboard */
+[data-dashboard="true"] input,
+[data-dashboard="true"] textarea,
+[data-dashboard="true"] select {
+  font-variant-numeric: lining-nums;
+  -webkit-font-feature-settings: "lnum";
+  font-feature-settings: "lnum";
+}
+
+/* Specific targeting for dashboard pages */
+[class*="dash"] input,
+[class*="dash"] textarea,
+[class*="dash"] select {
+  font-variant-numeric: lining-nums;
+  -webkit-font-feature-settings: "lnum";
+  font-feature-settings: "lnum";
+}

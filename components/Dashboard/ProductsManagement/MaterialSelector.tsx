@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Trash2, Package, Search, AlertCircle } from 'lucide-react'
 import { MaterialUsed, RawMaterial } from './types'
+import { createProfessionalNumberInputProps } from '../../../funcs/number-utils'
 
 interface MaterialSelectorProps {
   materials: MaterialUsed[]
@@ -192,14 +193,13 @@ export default function MaterialSelector({
                     الكمية *
                   </label>
                   <input
-                    type="number"
-                    step="0.001"
-                    min="0"
-                    value={material.quantity}
-                    onChange={(e) => updateMaterial(index, 'quantity', parseFloat(e.target.value) || 0)}
+                    {...createProfessionalNumberInputProps(
+                      material.quantity,
+                      (value) => updateMaterial(index, 'quantity', parseFloat(value) || 0),
+                      "0.000"
+                    )}
                     disabled={disabled}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="0.000"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent professional-number-input"
                   />
                 </div>
 

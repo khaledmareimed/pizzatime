@@ -23,8 +23,8 @@ export default function Home() {
   };
 
   const handleClaimOffer = (offer: OfferItem) => {
-    // Handle offer claim logic
-    console.log(`Claimed offer: ${offer.title}`);
+    // Navigate to the product detail page for the offer
+    router.push(`/user/item/${offer.id}`);
   };
 
   const handleViewDetails = (item: Product) => {

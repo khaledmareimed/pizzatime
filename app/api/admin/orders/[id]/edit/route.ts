@@ -3,6 +3,8 @@ import { auth } from '../../../../../../auth'
 import { createCollection, User, UserSchema, Order, OrderSchema, SystemLog, SystemLogSchema } from '../../../../../../funcs/collections'
 import { rateLimit } from '../../../../../../funcs/middleware/rateLimit'
 import { getJordanTime } from '../../../../../../funcs/jordanLocale'
+import { handleOrderEdit } from '../../../../../../funcs/material-order-management'
+import { MATERIAL_USAGE_STATUSES } from '../../../../../../funcs/types/order-status'
 
 /**
  * PUT /api/admin/orders/[id]/edit - Update order details (Admin only)
@@ -114,10 +116,17 @@ export async function PUT(
     // Find the order in both collections
     let orderFound = false
     let updatedOrder = null
+    let materialTransactionResult = null
 
     // First, try to find and update in the orders collection
     try {
       const existingOrder = await orderCollection.model.findOne({ orderId: orderId })
+      
+      // Store original order for material management
+      let originalOrder = null
+      if (existingOrder) {
+        originalOrder = JSON.parse(JSON.stringify(existingOrder)) // Deep clone
+      }
       
       if (existingOrder) {
         // Transform deliveryInfo back to deliveryAddress structure
@@ -203,6 +212,65 @@ export async function PUT(
 
         orderFound = true
         console.log('✅ Order updated in orders collection')
+        
+        // Handle material management for order edits if order is in material usage status
+        if (originalOrder && MATERIAL_USAGE_STATUSES.includes(originalOrder.status)) {
+          try {
+            console.log('🔧 Processing material management for order edit:', {
+              orderId: originalOrder.orderId,
+              status: originalOrder.status,
+              originalItemsCount: originalOrder.items?.length || 0,
+              newItemsCount: items?.length || 0
+            })
+            
+            // Create updated order object for material comparison
+            const updatedOrderForMaterial = {
+              ...originalOrder,
+              items: items,
+              orderSummary: updateData.orderSummary
+            }
+            
+            const materialTransactions = await handleOrderEdit(
+              originalOrder,
+              updatedOrderForMaterial,
+              session.user.id || session.user.email || 'admin'
+            )
+            
+            materialTransactionResult = {
+              success: true,
+              transactions: materialTransactions,
+              transactionCount: materialTransactions.length,
+              message: materialTransactions.length > 0 
+                ? `تم تحديث ${materialTransactions.length} معاملة مواد خام`
+                : 'لا توجد تغييرات في المواد الخام'
+            }
+            
+            console.log('✅ Material management completed:', {
+              transactionCount: materialTransactions.length,
+              success: true
+            })
+            
+          } catch (materialError) {
+            console.error('❌ Material management error:', materialError)
+            materialTransactionResult = {
+              success: false,
+              error: materialError instanceof Error ? materialError.message : 'Unknown material error',
+              message: 'فشل في تحديث المواد الخام',
+              transactionCount: 0
+            }
+          }
+        } else {
+          console.log('ℹ️ Skipping material management - order not in material usage status:', {
+            status: originalOrder?.status,
+            isInMaterialUsageStatus: originalOrder ? MATERIAL_USAGE_STATUSES.includes(originalOrder.status) : false
+          })
+          materialTransactionResult = {
+            success: true,
+            message: 'لا حاجة لتحديث المواد - الطلب ليس في حالة استخدام المواد',
+            transactionCount: 0,
+            skipped: true
+          }
+        }
         
       }
     } catch (error) {
@@ -307,9 +375,10 @@ export async function PUT(
     // Log the admin action
     try {
       await systemLogCollection.model.create({
+        userId: session.user.id || session.user.email || 'admin',
         timestamp: new Date(),
         level: 'info',
-        action: 'admin_order_edited',
+        action: 'order_updated',
         description: `Admin ${session.user.email} edited order ${orderId}`,
         metadata: {
           adminEmail: session.user.email,
@@ -393,7 +462,8 @@ export async function PUT(
     return NextResponse.json({
       success: true,
       message: 'تم تحديث الطلب بنجاح',
-      data: responseOrder
+      data: responseOrder,
+      materialTransaction: materialTransactionResult
     })
 
   } catch (error) {

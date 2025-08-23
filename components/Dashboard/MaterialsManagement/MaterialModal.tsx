@@ -7,6 +7,7 @@ import { theme } from '../../../funcs/responsive'
 import Button from '../../Button'
 import { useToastContext } from '../../../funcs/contexts/ToastContext'
 import { CATEGORIES, CATEGORY_LABELS, UNITS, UNIT_LABELS } from './index'
+import { createProfessionalNumberInputProps } from '../../../funcs/number-utils'
 
 interface RawMaterial {
   _id: string
@@ -281,20 +282,19 @@ export default function MaterialModal({ material, onClose, onSuccess }: Material
                 الحد الأدنى للمخزون *
               </label>
               <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.minimumStock}
-                onChange={(e) => handleInputChange('minimumStock', Number(e.target.value))}
+                {...createProfessionalNumberInputProps(
+                  formData.minimumStock,
+                  (value) => handleInputChange('minimumStock', Number(value) || 0),
+                  "0"
+                )}
                 className={cn(
-                  'w-full px-4 py-3 rounded-xl border',
+                  'w-full px-4 py-3 rounded-xl border professional-number-input',
                   theme.background.card,
                   theme.border.primary,
                   theme.text.primary,
                   'focus:ring-2 focus:ring-blue-500 focus:border-transparent',
                   errors.minimumStock && 'border-red-500'
                 )}
-                placeholder="0"
               />
               {errors.minimumStock && (
                 <p className="mt-1 text-sm text-red-600">{errors.minimumStock}</p>
@@ -307,20 +307,19 @@ export default function MaterialModal({ material, onClose, onSuccess }: Material
                 الحد الأقصى للمخزون (اختياري)
               </label>
               <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.maximumStock}
-                onChange={(e) => handleInputChange('maximumStock', e.target.value)}
+                {...createProfessionalNumberInputProps(
+                  formData.maximumStock || '',
+                  (value) => handleInputChange('maximumStock', value || ''),
+                  "اتركه فارغاً إذا لم يكن محدد"
+                )}
                 className={cn(
-                  'w-full px-4 py-3 rounded-xl border',
+                  'w-full px-4 py-3 rounded-xl border professional-number-input',
                   theme.background.card,
                   theme.border.primary,
                   theme.text.primary,
                   'focus:ring-2 focus:ring-blue-500 focus:border-transparent',
                   errors.maximumStock && 'border-red-500'
                 )}
-                placeholder="اتركه فارغاً إذا لم يكن محدد"
               />
               {errors.maximumStock && (
                 <p className="mt-1 text-sm text-red-600">{errors.maximumStock}</p>
