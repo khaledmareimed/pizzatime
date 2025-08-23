@@ -174,13 +174,7 @@ export default function KPICards({ reportType, data }: KPICardsProps) {
             color: 'purple',
             format: 'number'
           },
-          {
-            title: 'معدل دوران المخزون',
-            value: calculateInventoryTurnover(data.productSales),
-            icon: Activity,
-            color: 'orange',
-            format: 'number'
-          }
+        
         ]
 
       case 'financial-performance':
@@ -268,14 +262,7 @@ export default function KPICards({ reportType, data }: KPICardsProps) {
             format: 'currency',
             description: 'قيمة المواد المستهلكة'
           },
-          {
-            title: 'معدل دوران المخزون',
-            value: data.summary?.averageTurnover || 0,
-            icon: TrendingUp,
-            color: 'purple',
-            format: 'number',
-            description: 'متوسط معدل الدوران'
-          },
+          
           {
             title: 'تنبيهات المخزون المنخفض',
             value: data.summary?.lowStockItems || 0,

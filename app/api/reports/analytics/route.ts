@@ -286,8 +286,30 @@ async function generateSalesRevenueReport(orderCollection: any, financialCollect
         }
       },
       {
+        $lookup: {
+          from: 'categories',
+          let: { categoryId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: ['$_id', { $toObjectId: '$$categoryId' }]
+                }
+              }
+            }
+          ],
+          as: 'categoryInfo'
+        }
+      },
+      {
         $addFields: {
-          orderCount: { $size: '$orders' }
+          orderCount: { $size: '$orders' },
+          categoryName: { 
+            $ifNull: [
+              { $arrayElemAt: ['$categoryInfo.name', 0] },
+              'فئة غير معروفة'
+            ]
+          }
         }
       },
       { $sort: { revenue: -1 } }
@@ -522,9 +544,31 @@ async function generateProductPerformanceReport(orderCollection: any, productCol
         }
       },
       {
+        $lookup: {
+          from: 'categories',
+          let: { categoryId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: ['$_id', { $toObjectId: '$$categoryId' }]
+                }
+              }
+            }
+          ],
+          as: 'categoryInfo'
+        }
+      },
+      {
         $addFields: {
           productCount: { $size: '$uniqueProducts' },
-          uniqueOrders: { $size: '$orderCount' }
+          uniqueOrders: { $size: '$orderCount' },
+          categoryName: { 
+            $ifNull: [
+              { $arrayElemAt: ['$categoryInfo.name', 0] },
+              'فئة غير معروفة'
+            ]
+          }
         }
       },
       { $sort: { totalRevenue: -1 } }
@@ -548,6 +592,32 @@ async function generateProductPerformanceReport(orderCollection: any, productCol
           },
           quantity: { $sum: '$items.quantity' },
           revenue: { $sum: { $multiply: ['$items.quantity', '$items.price'] } }
+        }
+      },
+      {
+        $lookup: {
+          from: 'products',
+          let: { productId: '$_id.productId' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: ['$_id', { $toObjectId: '$$productId' }]
+                }
+              }
+            }
+          ],
+          as: 'productInfo'
+        }
+      },
+      {
+        $addFields: {
+          productName: { 
+            $ifNull: [
+              { $arrayElemAt: ['$productInfo.name', 0] },
+              'منتج غير معروف'
+            ]
+          }
         }
       },
       { $sort: { '_id.period': 1 } }

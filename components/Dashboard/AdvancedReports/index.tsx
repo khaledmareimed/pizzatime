@@ -114,13 +114,7 @@ const reportTypes = [
     icon: Clock,
     color: 'teal'
   },
-  {
-    id: 'inventory-analytics',
-    name: 'تحليلات المخزون',
-    description: 'إدارة المواد والمخزون',
-    icon: Activity,
-    color: 'red'
-  },
+
   {
     id: 'time-series',
     name: 'التحليل الزمني',
@@ -192,10 +186,264 @@ export default function AdvancedReports({ session }: AdvancedReportsProps) {
     setFilters(prev => ({ ...prev, ...newFilters }))
   }
 
-  const handleExport = async (format: 'pdf' | 'excel' | 'csv') => {
-    // Implementation for export functionality
-    console.log('Exporting report as:', format)
-    setShowExportModal(false)
+  const handleExport = async (format: 'pdf' | 'excel' | 'csv', options: any) => {
+    try {
+      // Import the export utilities dynamically
+      const { exportToExcel, exportToCSV } = await import('@/funcs/export-utils')
+      
+      // Get the actual data that's being displayed in the tables
+      const tablesData = getExportTablesData(selectedReportType, currentReportData)
+      
+      // Prepare export data with the actual table data
+      const exportData = {
+        metadata: {
+          reportType: selectedReportType,
+          generatedAt: new Date().toLocaleString('ar-SA'),
+          dateRange: filters.dateRange,
+          filters: filters
+        },
+        tables: tablesData,
+        kpis: []
+      }
+      
+      // Export based on format
+      if (format === 'excel') {
+        exportToExcel(exportData, options)
+      } else if (format === 'csv') {
+        exportToCSV(exportData, options)
+      } else {
+        // PDF fallback to Excel
+        exportToExcel(exportData, options)
+      }
+      
+    } catch (error) {
+      console.error('Export error:', error)
+      throw error
+    }
+  }
+
+  // Function to get the actual table data that's being displayed
+  const getExportTablesData = (reportType: string, data: any) => {
+    if (!data) return []
+    
+    const tables: any[] = []
+    
+    switch (reportType) {
+      case 'overview':
+        if (data.topProducts && data.topProducts.length > 0) {
+          tables.push({
+            title: 'أفضل المنتجات',
+            data: data.topProducts.map((item: any) => ({
+              'اسم المنتج': item.productName,
+              'الكمية المباعة': item.totalQuantity,
+              'إجمالي الإيرادات': item.totalRevenue,
+              'عدد الطلبات': item.orderCount
+            }))
+          })
+        }
+        if (data.recentOrders && data.recentOrders.length > 0) {
+          tables.push({
+            title: 'الطلبات الأخيرة',
+            data: data.recentOrders.map((item: any) => ({
+              'رقم الطلب': item.orderId,
+              'تاريخ الطلب': new Date(item.orderDate).toLocaleDateString('ar-SA'),
+              'قيمة الطلب': item.orderSummary?.total || 0,
+              'الحالة': item.status
+            }))
+          })
+        }
+        break
+
+      case 'sales-revenue':
+        if (data.revenueByProduct && data.revenueByProduct.length > 0) {
+          tables.push({
+            title: 'الإيرادات حسب المنتج',
+            data: data.revenueByProduct.map((item: any) => ({
+              'اسم المنتج': item.productName,
+              'الإيرادات': item.revenue,
+              'الكمية': item.quantity,
+              'متوسط السعر': item.averagePrice,
+              'عدد الطلبات': item.orderCount
+            }))
+          })
+        }
+        if (data.revenueByCategory && data.revenueByCategory.length > 0) {
+          tables.push({
+            title: 'الإيرادات حسب الفئة',
+            data: data.revenueByCategory.map((item: any) => ({
+              'الفئة': item.categoryName || item._id,
+              'الإيرادات': item.revenue,
+              'الكمية': item.quantity,
+              'عدد الطلبات': item.orderCount
+            }))
+          })
+        }
+        break
+
+      case 'customer-analytics':
+        if (data.topCustomers && data.topCustomers.length > 0) {
+          tables.push({
+            title: 'أفضل العملاء',
+            data: data.topCustomers.map((item: any) => ({
+              'معرف العميل': item._id,
+              'إجمالي الإنفاق': item.totalSpent,
+              'عدد الطلبات': item.orderCount,
+              'آخر طلب': new Date(item.lastOrder).toLocaleDateString('ar-SA')
+            }))
+          })
+        }
+        if (data.customerSegmentation && data.customerSegmentation.length > 0) {
+          tables.push({
+            title: 'تقسيم العملاء',
+            data: data.customerSegmentation.map((item: any) => ({
+              'فئة الإنفاق': item._id,
+              'عدد العملاء': item.count,
+              'متوسط الإنفاق': item.averageSpent,
+              'إجمالي الإيرادات': item.totalRevenue
+            }))
+          })
+        }
+        break
+
+      case 'product-performance':
+        if (data.productSales && data.productSales.length > 0) {
+          tables.push({
+            title: 'أداء المنتجات',
+            data: data.productSales.map((item: any) => ({
+              'اسم المنتج': item.productName,
+              'الكمية المباعة': item.totalQuantity,
+              'إجمالي الإيرادات': item.totalRevenue,
+              'متوسط السعر': item.averagePrice,
+              'طلبات فريدة': item.uniqueOrders
+            }))
+          })
+        }
+        if (data.categoryPerformance && data.categoryPerformance.length > 0) {
+          tables.push({
+            title: 'أداء الفئات',
+            data: data.categoryPerformance.map((item: any) => ({
+              'الفئة': item.categoryName || item._id,
+              'إجمالي الإيرادات': item.totalRevenue,
+              'الكمية المباعة': item.totalQuantity,
+              'عدد المنتجات': item.productCount,
+              'طلبات فريدة': item.uniqueOrders
+            }))
+          })
+        }
+        break
+
+      case 'financial-performance':
+        if (data.profitLossStatement && data.profitLossStatement.length > 0) {
+          tables.push({
+            title: 'بيان الأرباح والخسائر',
+            data: data.profitLossStatement.map((item: any) => ({
+              'النوع': item._id,
+              'المبلغ': item.total,
+              'عدد المعاملات': item.count
+            }))
+          })
+        }
+        if (data.expenseBreakdown && data.expenseBreakdown.length > 0) {
+          tables.push({
+            title: 'تفصيل المصروفات',
+            data: data.expenseBreakdown.map((item: any) => ({
+              'فئة المصروف': item._id,
+              'إجمالي المبلغ': item.total,
+              'عدد المعاملات': item.count,
+              'متوسط المبلغ': item.average
+            }))
+          })
+        }
+        if (data.materialExpenses && data.materialExpenses.length > 0) {
+          tables.push({
+            title: 'مصروفات المواد',
+            data: data.materialExpenses.map((item: any) => ({
+              'اسم المادة': item._id,
+              'إجمالي التكلفة': item.totalCost,
+              'الكمية': item.quantity,
+              'متوسط سعر الوحدة': item.averageUnitPrice,
+              'عدد المشتريات': item.purchaseCount
+            }))
+          })
+        }
+        break
+
+      case 'operational-efficiency':
+        if (data.deliveryPerformance && data.deliveryPerformance.length > 0) {
+          tables.push({
+            title: 'أداء التسليم حسب المنطقة',
+            data: data.deliveryPerformance.map((item: any) => ({
+              'المنطقة': item._id,
+              'متوسط وقت التسليم (دقيقة)': item.averageDeliveryTime,
+              'عدد الطلبات': item.orderCount,
+              'معدل النجاح': `${item.successRate}%`
+            }))
+          })
+        }
+        if (data.orderStatusDistribution && data.orderStatusDistribution.length > 0) {
+          tables.push({
+            title: 'توزيع حالات الطلبات',
+            data: data.orderStatusDistribution.map((item: any) => ({
+              'الحالة': item._id,
+              'عدد الطلبات': item.count,
+              'إجمالي القيمة': item.totalValue
+            }))
+          })
+        }
+        break
+
+      case 'inventory-analytics':
+        if (data.stockLevels && data.stockLevels.length > 0) {
+          tables.push({
+            title: 'مستويات المخزون',
+            data: data.stockLevels.map((item: any) => ({
+              'اسم المادة': item.name,
+              'الفئة': item.category,
+              'الوحدة': item.unit,
+              'المخزون الحالي': item.currentStock,
+              'الحد الأدنى': item.minimumStock,
+              'قيمة المخزون': item.stockValue,
+              'حالة المخزون': item.stockStatus
+            }))
+          })
+        }
+        break
+
+      case 'time-series':
+        if (data.revenueTimeSeries && data.revenueTimeSeries.length > 0) {
+          tables.push({
+            title: 'السلسلة الزمنية للإيرادات',
+            data: data.revenueTimeSeries.map((item: any) => ({
+              'الفترة': JSON.stringify(item._id),
+              'الإيرادات': item.revenue,
+              'عدد الطلبات': item.orders
+            }))
+          })
+        }
+        if (data.orderCountTimeSeries && data.orderCountTimeSeries.length > 0) {
+          tables.push({
+            title: 'السلسلة الزمنية لعدد الطلبات',
+            data: data.orderCountTimeSeries.map((item: any) => ({
+              'الفترة': JSON.stringify(item._id),
+              'عدد الطلبات': item.count
+            }))
+          })
+        }
+        break
+
+      default:
+        // Generic fallback - export any array data found
+        Object.keys(data).forEach(key => {
+          if (Array.isArray(data[key]) && data[key].length > 0) {
+            tables.push({
+              title: key,
+              data: data[key]
+            })
+          }
+        })
+    }
+    
+    return tables
   }
 
   const currentReportData = reportData[selectedReportType as keyof ReportData]

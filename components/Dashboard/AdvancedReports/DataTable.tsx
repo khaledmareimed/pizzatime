@@ -42,6 +42,50 @@ export default function DataTable({ reportType, data }: DataTableProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(10)
 
+  const handleTableExport = async (tableData: TableData) => {
+    try {
+      // Import the export utilities dynamically
+      const { exportToExcel } = await import('@/funcs/export-utils')
+      
+      // Prepare export data for this specific table
+      const exportData = {
+        metadata: {
+          reportType,
+          generatedAt: new Date().toLocaleString('ar-SA'),
+          dateRange: 'حسب الفلاتر المحددة'
+        },
+        tables: [{
+          title: tableData.title,
+          data: tableData.rows.map(row => {
+            const exportRow: any = {}
+            tableData.columns.forEach(column => {
+              exportRow[column.label] = formatCellValue(getNestedValue(row, column.key), column.format)
+            })
+            return exportRow
+          })
+        }]
+      }
+      
+      // Export options for individual table
+      const options = {
+        format: 'excel' as const,
+        includeCharts: false,
+        includeTables: true,
+        includeKPIs: false,
+        dateRange: '',
+        customFileName: `${tableData.title}_${new Date().toISOString().split('T')[0]}`,
+        orientation: 'landscape' as const,
+        pageSize: 'A4' as const
+      }
+      
+      exportToExcel(exportData, options)
+      
+    } catch (error) {
+      console.error('Error exporting table:', error)
+      alert('حدث خطأ أثناء تصدير الجدول')
+    }
+  }
+
   if (!data) return null
 
   const getTableData = (): TableData[] => {
@@ -86,7 +130,7 @@ export default function DataTable({ reportType, data }: DataTableProps) {
           {
             title: 'الإيرادات حسب الفئة',
             columns: [
-              { key: '_id', label: 'الفئة', sortable: true },
+              { key: 'categoryName', label: 'الفئة', sortable: true },
               { key: 'revenue', label: 'الإيرادات', sortable: true, format: 'currency' },
               { key: 'quantity', label: 'الكمية', sortable: true, format: 'number' },
               { key: 'orderCount', label: 'عدد الطلبات', sortable: true, format: 'number' }
@@ -135,7 +179,7 @@ export default function DataTable({ reportType, data }: DataTableProps) {
           {
             title: 'أداء الفئات',
             columns: [
-              { key: '_id', label: 'الفئة', sortable: true },
+              { key: 'categoryName', label: 'الفئة', sortable: true },
               { key: 'totalRevenue', label: 'إجمالي الإيرادات', sortable: true, format: 'currency' },
               { key: 'totalQuantity', label: 'الكمية المباعة', sortable: true, format: 'number' },
               { key: 'productCount', label: 'عدد المنتجات', sortable: true, format: 'number' },
@@ -188,6 +232,82 @@ export default function DataTable({ reportType, data }: DataTableProps) {
               { key: 'totalValue', label: 'إجمالي القيمة', sortable: true, format: 'currency' }
             ],
             rows: data.orderStatusDistribution || []
+          }
+        ]
+
+      case 'inventory-analytics':
+        console.log('🔍 Inventory Analytics Data:', data)
+        console.log('🔍 Stock Levels:', data.stockLevels?.length || 0, 'items')
+        console.log('🔍 Cost Analysis:', data.costAnalysis?.length || 0, 'items')
+        console.log('🔍 Reorder Alerts:', data.reorderAlerts?.length || 0, 'items')
+        console.log('🔍 Material Usage:', data.materialUsage?.length || 0, 'items')
+        return [
+          {
+            title: 'مستويات المخزون',
+            columns: [
+              { key: 'name', label: 'اسم المادة', sortable: true },
+              { key: 'category', label: 'الفئة', sortable: true },
+              { key: 'unit', label: 'الوحدة', sortable: true },
+              { key: 'currentStock', label: 'المخزون الحالي', sortable: true, format: 'number' },
+              { key: 'minimumStock', label: 'الحد الأدنى', sortable: true, format: 'number' },
+              { key: 'stockValue', label: 'قيمة المخزون', sortable: true, format: 'currency' },
+              { key: 'stockStatus', label: 'حالة المخزون', sortable: true }
+            ],
+            rows: data.stockLevels || []
+          },
+          {
+            title: 'تحليل التكاليف',
+            columns: [
+              { key: 'materialName', label: 'اسم المادة', sortable: true },
+              { key: 'category', label: 'الفئة', sortable: true },
+              { key: 'totalPurchases', label: 'إجمالي المشتريات', sortable: true, format: 'currency' },
+              { key: 'totalQuantity', label: 'إجمالي الكمية', sortable: true, format: 'number' },
+              { key: 'averageUnitPrice', label: 'متوسط سعر الوحدة', sortable: true, format: 'currency' },
+              { key: 'purchaseCount', label: 'عدد المشتريات', sortable: true, format: 'number' }
+            ],
+            rows: data.costAnalysis || []
+          },
+          {
+            title: 'تنبيهات إعادة الطلب',
+            columns: [
+              { key: 'name', label: 'اسم المادة', sortable: true },
+              { key: 'category', label: 'الفئة', sortable: true },
+              { key: 'currentStock', label: 'المخزون الحالي', sortable: true, format: 'number' },
+              { key: 'minimumStock', label: 'الحد الأدنى', sortable: true, format: 'number' },
+              { key: 'averageCost', label: 'متوسط التكلفة', sortable: true, format: 'currency' }
+            ],
+            rows: data.reorderAlerts || []
+          },
+          {
+            title: 'استخدام المواد',
+            columns: [
+              { key: '_id', label: 'اسم المادة', sortable: true },
+              { key: 'totalUsed', label: 'الكمية المستخدمة', sortable: true, format: 'number' },
+              { key: 'usageCount', label: 'عدد الاستخدامات', sortable: true, format: 'number' },
+              { key: 'averageUsage', label: 'متوسط الاستخدام', sortable: true, format: 'number' }
+            ],
+            rows: data.materialUsage || []
+          }
+        ]
+
+      case 'time-series':
+        return [
+          {
+            title: 'السلسلة الزمنية للإيرادات',
+            columns: [
+              { key: '_id', label: 'الفترة', sortable: true },
+              { key: 'revenue', label: 'الإيرادات', sortable: true, format: 'currency' },
+              { key: 'orders', label: 'عدد الطلبات', sortable: true, format: 'number' }
+            ],
+            rows: data.revenueTimeSeries || []
+          },
+          {
+            title: 'السلسلة الزمنية لعدد الطلبات',
+            columns: [
+              { key: '_id', label: 'الفترة', sortable: true },
+              { key: 'count', label: 'عدد الطلبات', sortable: true, format: 'number' }
+            ],
+            rows: data.orderCountTimeSeries || []
           }
         ]
 
@@ -298,6 +418,7 @@ export default function DataTable({ reportType, data }: DataTableProps) {
               <Button
                 variant="outline"
                 size="sm"
+                onClick={() => handleTableExport(tableData)}
                 className="flex items-center space-x-2 rtl:space-x-reverse"
               >
                 <Download className="w-4 h-4" />

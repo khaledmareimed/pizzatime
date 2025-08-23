@@ -147,13 +147,7 @@ export default function ReportCharts({ reportType, data, groupBy }: ReportCharts
                 'doughnut'
               )}
             </div>
-            <div className="grid grid-cols-1 gap-6">
-              {renderChart(
-                prepareProductTrendsData(data.productTrends),
-                'اتجاهات المنتجات عبر الزمن',
-                'line'
-              )}
-            </div>
+       
           </div>
         )
 
@@ -537,7 +531,7 @@ function prepareCategoryRevenueData(categoryData: any[]): ChartData {
   if (!Array.isArray(categoryData)) return { labels: [], datasets: [] }
   
   return {
-    labels: categoryData.map(item => item._id || 'غير محدد'),
+    labels: categoryData.map(item => item.categoryName || item._id || 'غير محدد'),
     datasets: [{
       label: 'الإيرادات',
       data: categoryData.map(item => item.revenue || 0),
@@ -617,7 +611,7 @@ function prepareCategoryPerformanceData(categoryData: any[]): ChartData {
   if (!Array.isArray(categoryData)) return { labels: [], datasets: [] }
   
   return {
-    labels: categoryData.map(item => item._id || 'غير محدد'),
+    labels: categoryData.map(item => item.categoryName || item._id || 'غير محدد'),
     datasets: [{
       label: 'الإيرادات',
       data: categoryData.map(item => item.totalRevenue || 0),
@@ -632,16 +626,21 @@ function prepareProductTrendsData(trendsData: any[]): ChartData {
   // Group by product and create time series
   const productGroups = trendsData.reduce((acc: any, item) => {
     const productId = item._id.productId
-    if (!acc[productId]) acc[productId] = []
-    acc[productId].push(item)
+    if (!acc[productId]) {
+      acc[productId] = {
+        name: item.productName || `منتج ${productId}`,
+        data: []
+      }
+    }
+    acc[productId].data.push(item)
     return acc
   }, {})
   
   const labels = [...new Set(trendsData.map(item => formatPeriodLabel(item._id.period, 'week')))]
   const datasets = Object.keys(productGroups).slice(0, 5).map((productId, index) => ({
-    label: `منتج ${index + 1}`,
+    label: productGroups[productId].name,
     data: labels.map(label => {
-      const item = productGroups[productId].find((p: any) => formatPeriodLabel(p._id.period, 'week') === label)
+      const item = productGroups[productId].data.find((p: any) => formatPeriodLabel(p._id.period, 'week') === label)
       return item?.revenue || 0
     }),
     borderColor: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'][index],
