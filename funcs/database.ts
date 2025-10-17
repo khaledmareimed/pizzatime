@@ -97,13 +97,20 @@ function getDatabaseConfig(): DatabaseConfig {
  */
 export async function connectToDatabase(): Promise<Connection> {
   try {
-    // Return existing connection if available
-    if (connectionManager.connection && connectionManager.connection.readyState === 1) {
-      return connectionManager.connection
+    // Check if mongoose global connection is already active (connected)
+    if (mongoose.connection.readyState === 1) {
+      connectionManager.connection = mongoose.connection
+      connectionManager.promise = null
+      return mongoose.connection
     }
 
-    // Return existing promise if connection is in progress
-    if (connectionManager.promise) {
+    // If connection is in progress (connecting), wait for existing promise
+    if (mongoose.connection.readyState === 2 && connectionManager.promise) {
+      return connectionManager.promise
+    }
+
+    // Return existing promise if one exists and we're not disconnected
+    if (connectionManager.promise && mongoose.connection.readyState !== 0) {
       return connectionManager.promise
     }
 
@@ -112,30 +119,34 @@ export async function connectToDatabase(): Promise<Connection> {
     
     connectionManager.promise = new Promise(async (resolve, reject) => {
       try {
-        // Set up connection event handlers before connecting
-        mongoose.connection.on('connected', () => {
-          console.log('MongoDB connected successfully')
-        })
+        // Set up connection event handlers only once
+        if (!connectionManager.connection) {
+          mongoose.connection.once('connected', () => {
+            console.log('MongoDB connected successfully')
+          })
 
-        mongoose.connection.on('error', (error) => {
-          console.error('MongoDB connection error:', error.message)
-          // Clear the connection manager on error
-          connectionManager.connection = null
-          connectionManager.promise = null
-        })
+          mongoose.connection.on('error', (error) => {
+            console.error('MongoDB connection error:', error.message)
+            // Clear the connection manager on error
+            connectionManager.connection = null
+            connectionManager.promise = null
+          })
 
-        mongoose.connection.on('disconnected', () => {
-          console.log('MongoDB disconnected')
-          connectionManager.connection = null
-          connectionManager.promise = null
-        })
+          mongoose.connection.once('disconnected', () => {
+            console.log('MongoDB disconnected')
+            connectionManager.connection = null
+            connectionManager.promise = null
+          })
+        }
 
         // Connect to MongoDB
         await mongoose.connect(config.uri, config.options)
         
         connectionManager.connection = mongoose.connection
+        connectionManager.promise = null
         resolve(mongoose.connection)
       } catch (error) {
+        connectionManager.connection = null
         connectionManager.promise = null
         reject(error)
       }
@@ -143,6 +154,7 @@ export async function connectToDatabase(): Promise<Connection> {
 
     return connectionManager.promise
   } catch (error) {
+    connectionManager.connection = null
     connectionManager.promise = null
     throw new Error(`Database connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
@@ -201,7 +213,7 @@ export function getModel<T>(
  */
 export async function isDatabaseConnected(): Promise<boolean> {
   try {
-    return connectionManager.connection?.readyState === 1
+    return mongoose.connection.readyState === 1
   } catch {
     return false
   }

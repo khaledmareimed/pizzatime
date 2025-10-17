@@ -45,16 +45,13 @@ export interface Collection<T extends BaseDocument> {
  */
 export class CollectionManager {
   private collections: Map<string, Collection<any>> = new Map()
-  private isConnected: boolean = false
+  private registrationPromises: Map<string, Promise<Collection<any>>> = new Map()
 
   /**
    * Ensures database connection is established
    */
   private async ensureConnection(): Promise<void> {
-    if (!this.isConnected) {
-      await connectToDatabase()
-      this.isConnected = true
-    }
+    await connectToDatabase()
   }
 
   /**
@@ -68,64 +65,88 @@ export class CollectionManager {
       customValidators?: Array<(doc: T) => boolean | Promise<boolean>>
     }
   ): Promise<Collection<T>> {
-    await this.ensureConnection()
-
+    // Return existing collection if already registered
     if (this.collections.has(name)) {
       return this.collections.get(name)! as Collection<T>
     }
 
-    // Create schema with security options
-    const schema = new Schema<T>(schemaDefinition, {
-      ...commonSchemaOptions,
-      collection: name
-    })
-
-    // Add custom indexes for performance and uniqueness
-    if (options?.indexes) {
-      options.indexes.forEach(index => {
-        schema.index(index.fields, index.options)
-      })
+    // Wait for existing registration if in progress
+    if (this.registrationPromises.has(name)) {
+      return this.registrationPromises.get(name)! as Promise<Collection<T>>
     }
 
-    // Add custom validators for business logic
-    if (options?.customValidators) {
-      options.customValidators.forEach(validator => {
-        schema.pre('save', async function() {
-          const isValid = await validator(this as T)
-          if (!isValid) {
-            throw new Error(`Custom validation failed for ${name}`)
-          }
-        })
-      })
-    }
+    // Create registration promise to prevent concurrent registrations
+    const registrationPromise = (async () => {
+      try {
+        await this.ensureConnection()
 
-    // Add instance method for input sanitization
-    schema.methods.sanitizeInput = function() {
-      // Remove any potentially dangerous properties
-      const dangerousProps = ['__proto__', 'constructor', 'prototype']
-      dangerousProps.forEach(prop => {
-        if ((this as any)[prop]) {
-          delete (this as any)[prop]
+        // Double-check if collection was registered while we were waiting
+        if (this.collections.has(name)) {
+          return this.collections.get(name)! as Collection<T>
         }
-      })
-    }
 
-    // Add security middleware
-    schema.pre('save', function() {
-      // Sanitize data before saving
-      ;(this as any).sanitizeInput()
-    })
+        // Create schema with security options
+        const schema = new Schema<T>(schemaDefinition, {
+          ...commonSchemaOptions,
+          collection: name
+        })
 
-    const model = getModel<T>(name, schema, { strict: true })
+        // Add custom indexes for performance and uniqueness
+        if (options?.indexes) {
+          options.indexes.forEach(index => {
+            schema.index(index.fields, index.options)
+          })
+        }
+
+        // Add custom validators for business logic
+        if (options?.customValidators) {
+          options.customValidators.forEach(validator => {
+            schema.pre('save', async function() {
+              const isValid = await validator(this as T)
+              if (!isValid) {
+                throw new Error(`Custom validation failed for ${name}`)
+              }
+            })
+          })
+        }
+
+        // Add instance method for input sanitization
+        schema.methods.sanitizeInput = function() {
+          // Remove any potentially dangerous properties
+          const dangerousProps = ['__proto__', 'constructor', 'prototype']
+          dangerousProps.forEach(prop => {
+            if ((this as any)[prop]) {
+              delete (this as any)[prop]
+            }
+          })
+        }
+
+        // Add security middleware
+        schema.pre('save', function() {
+          // Sanitize data before saving
+          ;(this as any).sanitizeInput()
+        })
+
+        const model = getModel<T>(name, schema, { strict: true })
+        
+        const collection: Collection<T> = {
+          name,
+          model,
+          schema
+        }
+
+        this.collections.set(name, collection)
+        return collection
+      } finally {
+        // Clean up registration promise after completion
+        this.registrationPromises.delete(name)
+      }
+    })()
+
+    // Store the registration promise
+    this.registrationPromises.set(name, registrationPromise)
     
-    const collection: Collection<T> = {
-      name,
-      model,
-      schema
-    }
-
-    this.collections.set(name, collection)
-    return collection
+    return registrationPromise as Promise<Collection<T>>
   }
 
   /**

@@ -189,32 +189,7 @@ export default function AdminDashboard({ session }: AdminDashboardProps) {
         </div>
       </motion.div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        {[
-          { title: 'إجمالي الطلبات', value: '1,247', icon: ShoppingBag, color: 'bg-blue-500' },
-          { title: 'عدد العملاء', value: '324', icon: User, color: 'bg-green-500' },
-          { title: 'الإيرادات اليوم', value: formatJordanCurrency(12450), icon: CreditCard, color: 'bg-purple-500' },
-          { title: 'الطلبات المعلقة', value: '18', icon: Clock, color: 'bg-yellow-500' }
-        ].map((stat, index) => (
-          <motion.div
-            key={stat.title}
-            {...animations.scaleIn}
-            transition={{ delay: index * 0.1 }}
-            className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-lg"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className={cn('text-xs text-gray-600 dark:text-gray-400', theme.text.secondary)}>{stat.title}</p>
-                <p className={cn('text-xl font-bold text-gray-900 dark:text-white', theme.text.primary)}>{stat.value}</p>
-              </div>
-              <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center', stat.color)}>
-                <stat.icon className="w-5 h-5 text-white" />
-              </div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
+     
 
       {/* Menu Grid */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">

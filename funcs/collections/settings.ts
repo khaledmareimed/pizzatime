@@ -140,7 +140,7 @@ export const SettingsSchema = {
     },
     phone: {
       type: String,
-      default: '+962-7-XXXX-XXXX',
+      default: '+962-7-9999-9999',
       match: [/^[\+]?[0-9\s\-\(\)]{10,20}$/, 'Please enter a valid phone number']
     },
     address: {
@@ -300,7 +300,7 @@ export function getDefaultSettings(updatedBy: string): Omit<Settings, keyof Base
     banners: [],
     restaurantInfo: {
       name: 'مطعمنا',
-      phone: '+962-7-XXXX-XXXX',
+      phone: '+962-7-9999-9999',
       address: 'عمان، الأردن',
       minimumOrderAmount: 10
     },
