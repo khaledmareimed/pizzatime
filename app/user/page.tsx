@@ -2,11 +2,9 @@
 
 import { useRouter } from 'next/navigation';
 import ImageBanner from '../../components/ImageBanner';
-import Offers from '../../components/Offers';
 import Products from '../../components/Products';
 import { useCartContext } from '../../funcs/contexts/CartContext';
 import { useToastContext } from '../../funcs/contexts/ToastContext';
-import type { OfferItem } from '../../funcs/utils';
 import type { Product } from '../../funcs/collections/product';
 
 export default function Home() {
@@ -20,11 +18,6 @@ export default function Home() {
     
     // Show success feedback with custom toast
     success('تم إضافة المنتج', `تم إضافة ${item.productName} إلى السلة بنجاح`);
-  };
-
-  const handleClaimOffer = (offer: OfferItem) => {
-    // Navigate to the product detail page for the offer
-    router.push(`/user/item/${offer.id}`);
   };
 
   const handleViewDetails = (item: Product) => {
@@ -43,9 +36,6 @@ export default function Home() {
     <main>
       {/* Image Banner */}
       <ImageBanner onSlideAction={handleBannerAction} />
-
-      {/* Offers Section */}
-      <Offers onClaimOffer={handleClaimOffer} />
 
       {/* Products Section */}
       <div id="products">
